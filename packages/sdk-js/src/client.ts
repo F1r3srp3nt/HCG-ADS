@@ -2,6 +2,7 @@ import { CONTRACT_VERSION, type AdContext, type Consent, type DeliveryRequest, t
 import { FrequencyStore } from "./frequency";
 import { deviceClass } from "./layout";
 import { renderAd } from "./render";
+import { isThemeName, type ThemeOption } from "./theme";
 
 declare const __SDK_VERSION__: string;
 export const VERSION: string = typeof __SDK_VERSION__ !== "undefined" ? __SDK_VERSION__ : "0.1.0-dev";
@@ -26,6 +27,8 @@ export interface InitOptions {
   autoScan?: boolean;
   /** Also render placements added to the page later (default false). */
   observe?: boolean;
+  /** Visual theme for every placement: "hcg-news" (default), "hcg-store", or { name: "custom", vars }. */
+  theme?: ThemeOption;
   /** Shadow root mode for rendered ads (default "closed"). */
   shadowMode?: "open" | "closed";
   onRender?: (e: RenderEvent) => void;
@@ -36,7 +39,12 @@ export interface InitOptions {
   sendBeacon?: (url: string) => boolean;
 }
 
-export interface PlacementOptions { placement: string; context?: AdContext }
+export interface PlacementOptions {
+  placement: string;
+  context?: AdContext;
+  /** Overrides the page theme for this placement (also: data-hcg-ads-theme="hcg-store"). */
+  theme?: ThemeOption;
+}
 
 interface Slot {
   options: PlacementOptions;
@@ -116,7 +124,8 @@ export class HCGAdsClient {
         const placement = e.dataset.hcgAdsPlacement;
         if (!placement) return;
         const keywords = e.dataset.hcgAdsKeywords?.split(",").map((s) => s.trim()).filter(Boolean);
-        void this.render(e, { placement, context: { category: e.dataset.hcgAdsCategory || undefined, keywords } });
+        const theme = isThemeName(e.dataset.hcgAdsTheme) && e.dataset.hcgAdsTheme !== "custom" ? e.dataset.hcgAdsTheme : undefined;
+        void this.render(e, { placement, context: { category: e.dataset.hcgAdsCategory || undefined, keywords }, ...(theme ? { theme } : {}) });
       });
     } catch (error) {
       this.log("scan failed", error);
@@ -254,7 +263,7 @@ export class HCGAdsClient {
   private show(element: Element, slot: Slot, ad: RenderableAd, placement: PlacementInfo | null): RenderableAd {
     const consent = this.consent();
     const clickUrl = consent.measurement ? ad.clickUrl : `${ad.clickUrl}${ad.clickUrl.includes("?") ? "&" : "?"}m=0`;
-    const r = renderAd(slot.root, ad, placement, { clickUrl });
+    const r = renderAd(slot.root, ad, placement, { clickUrl, theme: slot.options.theme ?? this.opts.theme });
     slot.deliveryId = ad.deliveryId;
     (element as HTMLElement).style.display = slot.originalDisplay;
     element.removeAttribute("aria-hidden");

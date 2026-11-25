@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, fmt, getToken, setToken } from "../api";
+import { api, fmt, signOut } from "../api";
 import { useCan, useSession } from "../App";
 import { Button, Chip, ErrorBox, Field, Loading, Notice, PageHeader, Panel, useAction, useLoad } from "../components/ui";
 import { EmergencyControl } from "./CommandCenter";
@@ -102,7 +102,12 @@ export function Settings() {
             <dt>Environment</dt><dd>{session.environment} · v{session.version}</dd>
           </dl>
           {session.identity.problems.length > 0 && <ul className="problems small">{session.identity.problems.map((x, i) => <li key={i}>{x}</li>)}</ul>}
-          {getToken() && <Button small onClick={() => { setToken(null); location.reload(); }}>Sign out (forget token)</Button>}
+          {p.authority === "hcg-connect" && (
+            <>
+              <Button small onClick={() => void signOut()}>Sign out of HCG ADS</Button>
+              <p className="small muted">Signs out of HCG ADS on this browser. HCG Connect has no global sign-out endpoint, so your HCG account stays signed in elsewhere.</p>
+            </>
+          )}
         </Panel>
         <Panel title="Emergency control">
           {settings.data && <EmergencyControl emergency={settings.data.emergencyShutdown} />}

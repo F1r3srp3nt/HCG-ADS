@@ -21,7 +21,16 @@ export function adminRoutes(ctx: AppContext) {
   });
 
   app.use("*", async (c, next) => {
-    const principal = await ctx.identity.authenticate(c.req.raw.headers);
+    const write = !["GET", "HEAD"].includes(c.req.method);
+    // Consequential operations always get a fresh central decision (no cached "yes").
+    const principal = await ctx.identity.authenticate(c.req.raw.headers, { fresh: write });
+    if (write && principal.csrfToken) {
+      // Cookie sessions: the request must come from HCG ADS itself and echo the session's CSRF token.
+      const origin = c.req.header("origin");
+      const allowed = [new URL(ctx.config.publicBaseUrl).origin, ...ctx.config.adminOrigins];
+      if (origin && !allowed.includes(origin)) throw new AppError(403, "bad_origin", "This request did not come from HCG ADS.");
+      if (c.req.header("x-hcg-ads-csrf") !== principal.csrfToken) throw new AppError(403, "csrf", "The request is missing its HCG ADS session token. Reload the page.");
+    }
     c.set("principal", principal);
     await next();
   });
@@ -39,7 +48,7 @@ export function adminRoutes(ctx: AppContext) {
 
   app.get("/session", (c) => {
     const p = c.get("principal");
-    return c.json({ principal: p, roleLabels: ROLE_LABELS, identity: ctx.identity.status(), environment: ctx.config.env, version: PRODUCT_VERSION });
+    return c.json({ principal: p, csrfToken: p.csrfToken ?? null, roleLabels: ROLE_LABELS, identity: ctx.identity.status(), environment: ctx.config.env, version: PRODUCT_VERSION });
   });
 
   app.get("/overview", async (c) => {

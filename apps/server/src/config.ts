@@ -25,6 +25,15 @@ const HcgConnectSchema = z.object({
   /** HCG Connect OAuth client ids whose tokens are accepted. */
   trustedClientIds: z.array(z.string()).default([]),
   organisationId: z.string().nullable().default(null),
+  /**
+   * The HCG ADS web application's own dedicated client (ERP → App Integrations → hcg.ads →
+   * Dedicated app login registration). Public PKCE S256 client, no secret. Never defaulted:
+   * until HCG issues it, web sign-in is unavailable and the command center says so.
+   */
+  webClient: z.object({
+    clientId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "clientId must be the UUID HCG issued"),
+    redirectUri: z.string().url(),
+  }).strict().nullable().default(null),
 }).strict();
 export type HcgConnectConfig = z.infer<typeof HcgConnectSchema>;
 
@@ -132,6 +141,12 @@ export function validateHcgConnectConfig(raw: unknown): { config: HcgConnectConf
     const url = new URL(u);
     if (url.protocol !== "https:" && !["127.0.0.1", "localhost"].includes(url.hostname)) problems.push(`${u} must use https://.`);
   }
+  if (c.webClient) {
+    const r = new URL(c.webClient.redirectUri);
+    const loopback = ["127.0.0.1", "localhost"].includes(r.hostname);
+    if (r.protocol !== "https:" && !(loopback && r.protocol === "http:")) problems.push("webClient.redirectUri must be https:// (or loopback http for development).");
+    if (r.pathname !== "/auth/callback" || r.search || r.hash) problems.push("webClient.redirectUri must be exactly <origin>/auth/callback.");
+  }
   if (c.productId.includes("<") || Object.values(c.roleFeatures).some((v) => v.includes("<"))) {
     problems.push("productId and roleFeatures still contain placeholders. HCG has to issue the ERP App Access keys for HCG ADS.");
   }
@@ -205,6 +220,9 @@ export function assertSafe(c: ServerConfig): void {
   const loopback = ["127.0.0.1", "localhost", "::1"].includes(c.host);
   if (c.identity.mode === "development" && c.env === "production") {
     throw new Error("The development identity provider cannot be used in production. Configure HCG Connect.");
+  }
+  if (c.env === "production" && !c.publicBaseUrl.startsWith("https://")) {
+    throw new Error("Production requires an https:// public URL (HCG_ADS_PUBLIC_URL): session cookies are Secure-only.");
   }
   if (c.identity.mode === "development" && !loopback) {
     throw new Error("The development identity provider only listens on loopback (127.0.0.1). Do not expose this computer.");

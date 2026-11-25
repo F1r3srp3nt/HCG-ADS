@@ -5,8 +5,12 @@ import { systemClock, type Clock } from "./core/clock.ts";
 import { AuditLog, SYSTEM_ACTOR } from "./core/audit.ts";
 import { Signer } from "./core/signing.ts";
 import { SettingsService } from "./governance/settings.ts";
+import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
 import { DevelopmentIdentityProvider, HcgConnectIdentityProvider, type IdentityProvider } from "./identity/provider.ts";
+import { HcgOAuthClient } from "./identity/oauth.ts";
+import { WebSessionStore } from "./identity/web-sessions.ts";
 import { HcgNewsAdapter } from "./sources/hcg-news.ts";
+import { HcgStoreAdapter } from "./sources/hcg-store.ts";
 import { UnconfiguredSourceAdapter, type ContentSourceAdapter } from "./sources/adapter.ts";
 import { ContentSourceRegistry } from "./sources/registry.ts";
 import { PublisherService } from "./publishers/service.ts";
@@ -47,6 +51,8 @@ export interface ContextOverrides {
   processor?: MediaProcessor;
   sourceAdapters?: ContentSourceAdapter[];
   dbPath?: string;
+  /** Tests: the identity provider's signing keys. */
+  jwks?: JWTVerifyGetKey;
 }
 
 /**
@@ -54,6 +60,20 @@ export interface ContextOverrides {
  * storage, media processing, content sources, payments) is chosen here and
  * can be replaced without touching the modules that use it.
  */
+/** HCG Connect: bearer verification always; web sign-in only once HCG has issued the web client. */
+function buildHcgConnect(config: ServerConfig, db: Database, clock: Clock, fetchImpl: typeof fetch, jwksOverride?: JWTVerifyGetKey): HcgConnectIdentityProvider {
+  const c = config.identity.mode === "hcg-connect" ? config.identity.hcgConnect ?? null : null;
+  if (!c) return new HcgConnectIdentityProvider(null, config.hcgConnectProblems, fetchImpl);
+  const jwks = jwksOverride ?? createRemoteJWKSet(new URL(c.jwksEndpoint), { cacheMaxAge: 10 * 60 * 1000 });
+  const problems = [...config.hcgConnectProblems];
+  if (!c.webClient) problems.push("Web sign-in: HCG has not issued the HCG ADS web client yet (webClient is not configured).");
+  const options = c.webClient ? {
+    sessions: new WebSessionStore(db, clock, config.deliverySecret),
+    oauth: new HcgOAuthClient(c.issuer, c.webClient, () => jwks, fetchImpl, () => clock.now()),
+  } : {};
+  return new HcgConnectIdentityProvider(c, problems, fetchImpl, () => clock.now().getTime(), jwks, options);
+}
+
 export async function createContext(config: ServerConfig, o: ContextOverrides = {}): Promise<AppContext> {
   const clock = o.clock ?? systemClock;
   const db = new Database(o.dbPath ?? join(config.dataDir, "hcg-ads.db"));
@@ -62,11 +82,11 @@ export async function createContext(config: ServerConfig, o: ContextOverrides = 
 
   const identity = o.identity ?? (config.identity.mode === "development"
     ? new DevelopmentIdentityProvider()
-    : new HcgConnectIdentityProvider(config.identity.hcgConnect ?? null, config.hcgConnectProblems, o.fetch ?? fetch));
+    : buildHcgConnect(config, db, clock, o.fetch ?? fetch, o.jwks));
 
   const adapters = o.sourceAdapters ?? [
     new HcgNewsAdapter(config.hcgNews, config.hcgNewsProblems, o.fetch ?? fetch, () => clock.now()),
-    new UnconfiguredSourceAdapter("hcg-store", "HCG Store", "Products from the HCG Store.", ["HCG Store has not published a content contract for HCG ADS yet."]),
+    new HcgStoreAdapter({ catalogueUrl: process.env.HCG_ADS_STORE_CATALOGUE_URL ?? null, siteUrl: process.env.HCG_ADS_STORE_SITE_URL }, o.fetch ?? fetch),
     new UnconfiguredSourceAdapter("hcg-website", "HCG website", "Pages and announcements from hakmicapitalgroup.com.", ["The HCG website has not published a content contract for HCG ADS yet."]),
   ];
   const sources = new ContentSourceRegistry(db, clock, audit, adapters);

@@ -110,6 +110,8 @@ export interface Principal {
   /** "hcg-connect" in production; "development" only on a local, clearly labelled build. */
   authority: "hcg-connect" | "development";
   organisationId?: string | null;
+  /** Web sessions only: the token state-changing requests must echo in `x-hcg-ads-csrf`. */
+  csrfToken?: string;
 }
 
 // ---------------------------------------------------------------------------

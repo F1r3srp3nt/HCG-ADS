@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Principal, Permission } from "@hcg-ads/contracts";
-import { api, ApiError, setToken, getToken } from "./api";
+import { api, ApiError, setCsrf, authStatus, signIn, signOut, type AuthStatus } from "./api";
 import { Button, ErrorBox, Field, Loading, navigate, useLoad, useRoute } from "./components/ui";
 import { Icon, type IconName } from "./components/Icon";
 import { CommandCenter } from "./pages/CommandCenter";
@@ -21,6 +21,7 @@ import { Settings } from "./pages/Settings";
 
 export interface Session {
   principal: Principal;
+  csrfToken?: string | null;
   roleLabels: Record<string, string>;
   identity: { mode: string; configured: boolean; label: string; problems: string[] };
   environment: string;
@@ -74,21 +75,35 @@ function Page({ route }: { route: string[] }) {
 }
 
 function SignIn({ error, onDone }: { error: ApiError | null; onDone: () => void }) {
-  const [token, setTok] = useState(getToken() ?? "");
+  const [status, setStatus] = useState<AuthStatus | null>(null);
+  useEffect(() => { void authStatus().then(setStatus); }, []);
+  const params = new URLSearchParams(window.location.search);
+  const outcome = params.get("signin");
+  const available = status?.signInAvailable === true;
+  // A refusal from HCG (no role, revoked) is shown as-is; "unauthenticated" just means: sign in.
+  const showError = error && error.code !== "unauthenticated" ? error : null;
   return (
     <div className="signin">
       <div className="signin-card panel">
         <Brand />
         <h1 className="page-title">Sign in with HCG Connect</h1>
-        <p className="muted">HCG ADS uses your HCG account. Roles are granted centrally by HCG (ERP App Access); HCG ADS keeps no accounts of its own.</p>
-        <ErrorBox error={error} />
-        <Field label="HCG Connect access token" hint="Until the HCG ADS OAuth client is issued by HCG, paste a token from an HCG sign-in. It is kept for this browser tab only.">
-          <textarea className="input mono" rows={4} value={token} onChange={(e) => setTok(e.target.value)} />
-        </Field>
-        <div className="row">
-          <Button variant="primary" onClick={() => { setToken(token.trim() || null); onDone(); }}>Continue</Button>
-          {getToken() && <Button onClick={() => { setToken(null); setTok(""); onDone(); }}>Forget token</Button>}
-        </div>
+        <p className="muted">HCG ADS uses your HCG account. Your roles are granted centrally by HCG (ERP App Access); HCG ADS keeps no accounts or passwords of its own.</p>
+        {outcome === "denied" && <p className="problems">You declined the HCG Connect consent. Nothing was shared with HCG ADS.</p>}
+        {outcome === "failed" && <p className="problems">HCG Connect could not complete the sign-in. Please try again.</p>}
+        <ErrorBox error={showError} />
+        {available ? (
+          <div className="row">
+            <Button variant="primary" onClick={signIn}>Sign in with HCG Connect</Button>
+          </div>
+        ) : (
+          <div className="note small" data-testid="signin-unavailable">
+            <b>{status?.label ?? "HCG Connect"}</b>
+            <p>Sign-in becomes available when HCG issues the HCG ADS web client (ERP → App Integrations → hcg.ads). No temporary or shared client is used in the meantime.</p>
+            {status?.problems?.length ? <ul className="problems">{status.problems.map((p, i) => <li key={i}>{p}</li>)}</ul> : null}
+          </div>
+        )}
+        <div className="row"><Button onClick={onDone}>Check again</Button></div>
+        <p className="small muted">You are sent to HCG's own sign-in and consent page. Your HCG password is never entered into HCG ADS, and HCG tokens stay on the HCG ADS server.</p>
       </div>
     </div>
   );
@@ -144,6 +159,7 @@ function Shell({ session, children, route }: { session: Session; children: React
             <div className="who-roles">{session.principal.roles.map((r) => session.roleLabels[r] ?? r).join(" · ")}</div>
           </div>
           <div className="ver">v{session.version} · {session.environment}</div>
+          {session.principal.authority === "hcg-connect" && <button className="link small" onClick={() => void signOut()}>Sign out</button>}
         </div>
       </aside>
       <div className="main">
@@ -174,7 +190,7 @@ export function App() {
   const load = () => {
     setLoading(true);
     api.get<Session>("/session")
-      .then((s) => { setSession(s); setError(null); })
+      .then((s) => { setCsrf(s.csrfToken ?? null); setSession(s); setError(null); })
       .catch((e: ApiError) => { setSession(null); setError(e); })
       .finally(() => setLoading(false));
   };

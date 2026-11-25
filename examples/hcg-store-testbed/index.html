@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="dark">
+  <title>HCG Store — HCG ADS theme test environment</title>
+  <link rel="stylesheet" href="testbed.css">
+</head>
+<body>
+  <div class="testbanner" role="note">
+    <strong>Test environment.</strong> A page in HCG Store's visual style showing HCG ADS placements with the <code>hcg-store</code> theme. It is not HCG Store, sells nothing and publishes nothing.
+  </div>
+  <header class="header">
+    <a class="brand" href="./"><span class="brand-mark">HCG</span> Store <span class="brand-tag">theme test</span></a>
+  </header>
+  <main class="page">
+    <section class="hero">
+      <h1>Software from Hakmi Capital Group</h1>
+      <p>Placements below use the HCG Store theme: obsidian surfaces, silver hairlines, a metal call to action and cyan only for focus and the disclosure.</p>
+    </section>
+    <div class="slot slot-wide" id="slot-leaderboard" data-slot="leaderboard"></div>
+    <div class="grid">
+      <div class="panel">
+        <h2>300 × 250</h2>
+        <div class="slot" id="slot-rectangle" data-slot="rectangle"></div>
+      </div>
+      <div class="panel panel-wide">
+        <h2>Native card</h2>
+        <div class="slot" id="slot-native" data-slot="native"></div>
+      </div>
+    </div>
+    <section class="panel tools">
+      <h2>Placements</h2>
+      <p class="hint">Pass public placement keys from HCG ADS → Placements as <code>?leaderboard=KEY&amp;rectangle=KEY&amp;native=KEY</code>. Empty slots collapse.</p>
+      <ul id="debug" class="debug"></ul>
+      <label><input type="checkbox" id="consent-measurement"> Measurement</label>
+      <label><input type="checkbox" id="consent-storage"> Storage</label>
+    </section>
+  </main>
+  <footer class="footer">HCG ADS SDK <span id="sdk-version">not loaded</span></footer>
+  <script src="/delivery/v1/sdk/hcg-ads.js" data-manual></script>
+  <script src="testbed.js"></script>
+</body>
+</html>

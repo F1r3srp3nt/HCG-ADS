@@ -1,5 +1,6 @@
 import type { PlacementInfo, RenderableAd } from "./types";
 import { cropAspect, cropStyle, layoutFor } from "./layout";
+import { applyTheme, type ThemeOption } from "./theme";
 
 /**
  * Renders a RenderableAd. Every piece of ad text is set with textContent;
@@ -13,7 +14,7 @@ export const STYLES = `
 .hcg-ad { position: relative; display: block; overflow: hidden; text-decoration: none; color: var(--hcg-ads-text, #111418);
   background: var(--hcg-ads-surface, #ffffff); border: 1px solid var(--hcg-ads-border, rgba(17,20,24,.14)); border-radius: var(--hcg-ads-radius, 10px);
   font: 14px/1.35 var(--hcg-ads-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif); container-type: inline-size; }
-.hcg-ad:focus-visible { outline: 2px solid var(--hcg-ads-accent, #0b7cff); outline-offset: 2px; }
+.hcg-ad:focus-visible { outline: 2px solid var(--hcg-ads-focus, var(--hcg-ads-accent, #0b7cff)); outline-offset: 2px; }
 .box-fixed { width: var(--w); height: var(--h); max-width: 100%; }
 .box-fluid { width: 100%; max-width: var(--w); aspect-ratio: var(--ratio); }
 .box-responsive { width: 100%; }
@@ -126,7 +127,7 @@ function image(doc: Document, url: string, alt: string, crop: import("./types").
   return img;
 }
 
-export function renderAd(root: ShadowRoot | HTMLElement, ad: RenderableAd, placement: PlacementInfo | null, opts: { clickUrl: string }): RenderResult {
+export function renderAd(root: ShadowRoot | HTMLElement, ad: RenderableAd, placement: PlacementInfo | null, opts: { clickUrl: string; theme?: ThemeOption }): RenderResult {
   const doc = (root as ShadowRoot).ownerDocument ?? (root as HTMLElement).ownerDocument ?? document;
   while (root.firstChild) root.removeChild(root.firstChild);
   const style = el(doc, "style");
@@ -144,6 +145,7 @@ export function renderAd(root: ShadowRoot | HTMLElement, ad: RenderableAd, place
   if (isMediaCreative && media!.kind === "video") {
     const box = el(doc, "div", "hcg-ad");
     sizeBox(box, placement);
+    applyTheme(box, opts.theme);
     if (box.classList.contains("box-responsive")) box.style.aspectRatio = media!.width && media!.height ? `${media!.width} / ${media!.height}` : "16 / 9";
     box.appendChild(el(doc, "span", "chip", ad.disclosure));
     const mbox = el(doc, "div", "media-box");
@@ -176,6 +178,7 @@ export function renderAd(root: ShadowRoot | HTMLElement, ad: RenderableAd, place
   link.title = ad.displayUrl;
   link.setAttribute("aria-label", label);
   sizeBox(link, placement);
+  applyTheme(link, opts.theme);
   link.appendChild(el(doc, "span", "chip", ad.disclosure));
   let mediaEl: HTMLImageElement | null = null;
 

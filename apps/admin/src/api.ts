@@ -1,7 +1,5 @@
 /** HCG ADS administration API client (/admin/v1). Relative URLs: same origin, or the Vite proxy in development. */
 
-export const TOKEN_KEY = "hcg-ads-token";
-
 export class ApiError extends Error {
   constructor(readonly status: number, readonly code: string, message: string, readonly details?: unknown) {
     super(message);
@@ -12,14 +10,26 @@ export class ApiError extends Error {
   }
 }
 
-export function getToken(): string | null {
-  try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
+/**
+ * Sign-in is a server-owned HCG Connect session (HttpOnly cookie): this app never sees or
+ * stores an HCG token. State-changing requests echo the session's CSRF token, which the
+ * server returns from GET /admin/v1/session and keeps only in memory here.
+ */
+let csrfToken: string | null = null;
+export function setCsrf(token: string | null) { csrfToken = token; }
+
+export interface AuthStatus { mode: string; configured: boolean; signInAvailable?: boolean; label: string; problems: string[] }
+export async function authStatus(): Promise<AuthStatus | null> {
+  try { const r = await fetch("/auth/status", { credentials: "same-origin" }); return r.ok ? ((await r.json()) as AuthStatus) : null; } catch { return null; }
 }
-export function setToken(token: string | null) {
-  try {
-    if (token) sessionStorage.setItem(TOKEN_KEY, token);
-    else sessionStorage.removeItem(TOKEN_KEY);
-  } catch { /* storage unavailable */ }
+export function signIn() {
+  const back = "/" + (window.location.hash || "#/command-center");
+  window.location.assign(`/auth/login?return=${encodeURIComponent(back)}`);
+}
+export async function signOut() {
+  await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined);
+  csrfToken = null;
+  window.location.reload();
 }
 
 type Listener = () => void;
@@ -29,14 +39,13 @@ export function onMutation(fn: Listener) { mutationListeners.add(fn); return () 
 
 async function request<T>(method: string, path: string, body?: unknown, init: { form?: FormData } = {}): Promise<T> {
   const headers: Record<string, string> = { accept: "application/json" };
-  const token = getToken();
-  if (token) headers.authorization = `Bearer ${token}`;
+  if (method !== "GET" && csrfToken) headers["x-hcg-ads-csrf"] = csrfToken;
   let payload: BodyInit | undefined;
   if (init.form) payload = init.form;
   else if (body !== undefined) { headers["content-type"] = "application/json"; payload = JSON.stringify(body); }
   let res: Response;
   try {
-    res = await fetch(`/admin/v1${path}`, { method, headers, body: payload });
+    res = await fetch(`/admin/v1${path}`, { method, headers, body: payload, credentials: "same-origin" });
   } catch {
     throw new ApiError(0, "network", "HCG ADS could not be reached. Is the server running?");
   }
@@ -63,8 +72,8 @@ export function uploadWithProgress<T>(path: string, form: FormData, onProgress: 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/admin/v1${path}`);
-    const token = getToken();
-    if (token) xhr.setRequestHeader("authorization", `Bearer ${token}`);
+    xhr.withCredentials = true;
+    if (csrfToken) xhr.setRequestHeader("x-hcg-ads-csrf", csrfToken);
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
     xhr.onerror = () => reject(new ApiError(0, "network", "The upload could not reach HCG ADS."));
     xhr.onload = () => {

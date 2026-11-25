@@ -10,7 +10,7 @@ const SUB = "3f1c2b8e-1111-4222-8333-944455556666";
 const cfg = {
   contractVersion: "hcg.ads.connect/1" as const, issuer: ISSUER, jwksEndpoint: `${ISSUER}/.well-known/jwks.json`,
   apiBaseUrl: "https://beta.hakmicapitalgroup.com", ecosystemApiPath: "/api/public/ecosystem/v1", productId: "hcg.ads",
-  roleFeatures: { campaign_manager: "ads.campaign_manager", creative_reviewer: "ads.creative_reviewer" }, trustedClientIds: [], organisationId: null,
+  roleFeatures: { campaign_manager: "ads.campaign_manager", creative_reviewer: "ads.creative_reviewer" }, trustedClientIds: [], organisationId: null, webClient: null,
 };
 
 async function setup(answer: (feature: string) => Response | Promise<Response>) {
@@ -18,7 +18,11 @@ async function setup(answer: (feature: string) => Response | Promise<Response>) 
   const jwk = { ...(await exportJWK(publicKey)), kid: "k1", alg: "ES256" };
   const jwks = createLocalJWKSet({ keys: [jwk] });
   const calls: any[] = [];
-  const fetchImpl = (async (_url: string, init: RequestInit) => {
+  const fetchImpl = (async (url: string, init: RequestInit) => {
+    if (String(url).endsWith("/me")) {
+      return Response.json({ api_version: "v1", user: { id: SUB, email: "founder@example.com", display_name: "Founder" },
+        organisations: [{ org_id: "2bdefe45-3bf4-466a-865e-8d4b4ac17462", slug: "hcg" }], product_policy: { active: true } });
+    }
     const body = JSON.parse(String(init.body));
     calls.push({ body, auth: (init.headers as Record<string, string>).authorization });
     return answer(body.feature_key);
@@ -39,7 +43,9 @@ describe("HCG Connect identity (fails closed)", () => {
     expect(p.permissions).toContain("campaigns.write");
     expect(p.permissions).not.toContain("campaigns.approve");
     expect(p.authority).toBe("hcg-connect");
-    expect(calls.every((c) => c.auth === `Bearer ${t}` && c.body.product_id === "hcg.ads")).toBe(true);
+    expect(calls.every((c) => c.auth === `Bearer ${t}` && c.body.product_id === "hcg.ads" && c.body.org_id === "2bdefe45-3bf4-466a-865e-8d4b4ac17462")).toBe(true);
+    expect(p.displayName).toBe("Founder");
+    expect(p.organisationId).toBe("2bdefe45-3bf4-466a-865e-8d4b4ac17462");
   });
 
   it("refuses missing, forged, expired and wrong-issuer tokens", async () => {

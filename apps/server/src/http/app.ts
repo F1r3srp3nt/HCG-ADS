@@ -8,6 +8,7 @@ import type { AppContext } from "../context.ts";
 import { AppError } from "../core/errors.ts";
 import { adminRoutes } from "./admin.ts";
 import { deliveryRoutes } from "./delivery.ts";
+import { authRoutes } from "./auth.ts";
 
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -48,7 +49,8 @@ export function createApp(ctx: AppContext) {
     if (origin && ctx.config.adminOrigins.includes(origin)) {
       c.header("access-control-allow-origin", origin);
       c.header("vary", "origin");
-      c.header("access-control-allow-headers", "authorization, content-type, x-hcg-dev-roles");
+      c.header("access-control-allow-headers", "authorization, content-type, x-hcg-dev-roles, x-hcg-ads-csrf");
+      c.header("access-control-allow-credentials", "true");
       c.header("access-control-allow-methods", "GET, POST, PATCH, DELETE, OPTIONS");
     }
     if (c.req.method === "OPTIONS") return c.body(null, 204);
@@ -56,6 +58,7 @@ export function createApp(ctx: AppContext) {
     await next();
   });
 
+  app.route("/auth", authRoutes(ctx));
   app.route("/admin/v1", adminRoutes(ctx));
   app.route("/delivery/v1", deliveryRoutes(ctx));
 
@@ -68,6 +71,12 @@ export function createApp(ctx: AppContext) {
     const serve = staticFiles(testbedDir, false);
     app.get("/testbed", (c) => c.redirect("/testbed/"));
     app.get("/testbed/*", (c) => serve(c.req.path.slice("/testbed".length)) ?? c.notFound());
+  }
+  const storeTestbedDir = resolve(fileURLToPath(new URL("../../../../examples/hcg-store-testbed", import.meta.url)));
+  if (ctx.config.env !== "production" && existsSync(storeTestbedDir)) {
+    const serve = staticFiles(storeTestbedDir, false);
+    app.get("/testbed-store", (c) => c.redirect("/testbed-store/"));
+    app.get("/testbed-store/*", (c) => serve(c.req.path.slice("/testbed-store".length)) ?? c.notFound());
   }
 
   if (ctx.config.adminStaticDir) {

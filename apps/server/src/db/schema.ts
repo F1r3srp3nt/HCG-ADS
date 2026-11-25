@@ -228,4 +228,51 @@ CREATE TABLE ledger_entries (
 );
 `,
   },
+  {
+    version: 2,
+    sql: `
+-- HCG Connect web sign-in (server-owned sessions; tokens encrypted at rest, never sent to the browser).
+CREATE TABLE auth_requests (
+  state_hash TEXT PRIMARY KEY,
+  nonce TEXT NOT NULL,
+  verifier_enc TEXT NOT NULL,
+  return_to TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE TABLE web_sessions (
+  id_hash TEXT PRIMARY KEY,
+  subject TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  email TEXT,
+  organisation_id TEXT,
+  founder_policy INTEGER NOT NULL DEFAULT 0,
+  access_token_enc TEXT NOT NULL,
+  refresh_token_enc TEXT,
+  access_expires_at TEXT NOT NULL,
+  csrf_token TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX web_sessions_subject ON web_sessions(subject);
+
+-- Advertising transparency and reporting (no reader identifiers are stored).
+CREATE TABLE ad_reports (
+  id TEXT PRIMARY KEY,
+  at TEXT NOT NULL,
+  campaign_id TEXT NOT NULL,
+  creative_id TEXT NOT NULL,
+  placement_id TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  details TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  resolved_by TEXT,
+  resolved_at TEXT,
+  resolution TEXT
+);
+CREATE INDEX ad_reports_status ON ad_reports(status, at);
+`,
+  },
 ];
+

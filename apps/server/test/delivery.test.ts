@@ -40,6 +40,19 @@ describe("delivery engine", () => {
     expect((await h.deliver(sidebar.publicKey, { exclude: [high.id, low.id] })).ad).toBeNull();
   });
 
+  it("uses contextual categories, and an internal house ad as fallback when configured", async () => {
+    const h = await harness();
+    const { sidebar } = await h.connectNews();
+    const r = await h.api("POST", "/admin/v1/campaigns/from-content", { sourceId: "src_hcg_news", externalIds: [article(1).id], placementIds: [sidebar.id] });
+    const id = r.body.campaigns[0].id;
+    await h.api("PATCH", `/admin/v1/campaigns/${id}`, { contextual: { categories: ["technology"], keywords: [] } });
+    for (const a of ["submit", "approve", "activate"]) await h.api("POST", `/admin/v1/campaigns/${id}/${a}`);
+    expect((await h.deliver(sidebar.publicKey, { context: { category: "technology" } })).ad?.campaignId).toBe(id);
+    expect((await h.deliver(sidebar.publicKey, { context: { category: "markets" } })).ad).toBeNull();
+    await h.api("PATCH", `/admin/v1/placements/${sidebar.id}`, { fallback: "house-ad" });
+    expect((await h.deliver(sidebar.publicKey, { context: { category: "markets" } })).ad?.campaignId).toBe(id);
+  });
+
   it("enforces total impression limits", async () => {
     const h = await harness();
     const { sidebar } = await h.connectNews();

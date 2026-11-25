@@ -121,8 +121,11 @@ export class DeliveryEngine {
       return empty(placement, "context_not_allowed");
     }
 
+    const active = this.campaigns.list({ state: "active" });
+    const collect = (houseAd: boolean) => {
     const candidates: Array<{ c: Campaign & { creatives: Creative[] }; pick: { creative: Creative; variant: CreativeVariant | null } }> = [];
-    for (const c of this.campaigns.list({ state: "active" })) {
+    for (const c of active) {
+      if (houseAd && c.kind !== "internal") continue;
       if (!c.placementIds.includes(placement.id) || exclude.has(c.id)) continue;
       if (c.startAt && new Date(c.startAt) > now) continue;
       if (c.endAt && new Date(c.endAt) <= now) continue;
@@ -130,13 +133,18 @@ export class DeliveryEngine {
       if (c.kind === "external" && !pub.campaignEligibility.external) continue;
       if (this.advertisers.get(c.advertiserId).status !== "approved") continue;
       const cats = c.contextual.categories.map((s) => s.toLowerCase());
-      if (cats.length && (!category || !cats.includes(category))) continue;
+      if (!houseAd && cats.length && (!category || !cats.includes(category))) continue;
       if (restrictions.blockedCategories.some((b) => cats.includes(b.toLowerCase()) || b.toLowerCase() === category) && c.kind === "external") continue;
       if (c.impressionLimit && this.campaigns.impressions(c.id) >= c.impressionLimit) continue;
       if (c.dailyImpressionLimit && this.campaigns.impressions(c.id, today) >= c.dailyImpressionLimit) continue;
       const pick = this.pickCreative(c, placement, req);
       if (pick) candidates.push({ c, pick });
     }
+    return candidates;
+    };
+    let candidates = collect(false);
+    // House-ad fallback: an internal HCG promotion for this placement, without contextual criteria.
+    if (!candidates.length && placement.fallback === "house-ad") candidates = collect(true);
     if (!candidates.length) return empty(placement, "no_eligible_campaign");
 
     // Highest priority wins; equal priorities rotate (weighted by priority when asked).
@@ -169,6 +177,16 @@ export class DeliveryEngine {
     }
     if (!options.length) return null;
     if (c.rotation === "sequential") return options[this.campaigns.impressions(c.id) % options.length];
+    if (c.rotation === "weighted" && options.length > 1) {
+      // Favour creatives with a better measured click-through rate, with a prior so new creatives still rotate.
+      const weights = options.map((o) => {
+        const row = this.db.get<{ i: number; k: number }>(
+          `SELECT SUM(type = 'impression') i, SUM(type = 'click') k FROM events WHERE creative_id = ? AND simulated = 0 AND invalid_reason IS NULL`, o.creative.id);
+        return ((row?.k ?? 0) + 1) / ((row?.i ?? 0) + 50);
+      });
+      let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+      for (let i = 0; i < options.length; i++) { r -= weights[i]; if (r <= 0) return options[i]; }
+    }
     return options[randomInt(options.length)];
   }
 

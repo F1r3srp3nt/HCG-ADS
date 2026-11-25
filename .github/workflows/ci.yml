@@ -1,0 +1,49 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install ffmpeg (media processing tests)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm test
+
+  hcg-server-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: F1r3srp3nt/HCG-Server
+          path: hcg-server
+          token: ${{ secrets.HCG_SERVER_READ_TOKEN }}
+        continue-on-error: true
+        id: hcgserver
+      - uses: actions/setup-go@v5
+        if: steps.hcgserver.outcome == 'success'
+        with:
+          go-version-file: hcg-server/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Build hcg-agent
+        if: steps.hcgserver.outcome == 'success'
+        run: cd hcg-server && go build -o ../hcg-agent ./cmd/hcg-agent
+      - run: npm ci
+      - name: HCG Server storage adapter against the real agent
+        if: steps.hcgserver.outcome == 'success'
+        run: HCG_SERVER_AGENT=${{ github.workspace }}/hcg-agent npx vitest run test/hcg-server.test.ts
+        working-directory: apps/server

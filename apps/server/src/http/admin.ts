@@ -7,6 +7,7 @@ import { HCG_NEWS_PUBLISHER_ID } from "../publishers/service.ts";
 import { SOURCE_IDS } from "../sources/registry.ts";
 import { CALLS_TO_ACTION } from "../creatives/validate.ts";
 import { dayOf } from "../core/clock.ts";
+import { HcgPaymentsGateway } from "../billing/hcg-payments.ts";
 
 type Env = { Variables: { principal: Principal } };
 
@@ -86,7 +87,7 @@ export function adminRoutes(ctx: AppContext) {
         { id: "hcg-news", name: "HCG News", role: "First publisher and content source", state: news.status, detail: news.lastSyncResult ?? news.description, problems: news.configurationProblems },
         { id: "hcg-server", name: "HCG Server", role: "Media storage", state: ctx.media.storageName === "hcg-server" ? (storage.ok ? "connected" : "degraded") : "available_adapter", detail: `${ctx.media.storageDescription()} — ${storage.message}`, problems: [] },
         { id: "media-processing", name: "Media processing", role: "Probe, thumbnails, optimisation, transcoding", state: ctx.media.processorInfo().name === "ffmpeg" ? "connected" : "degraded", detail: `Processor: ${ctx.media.processorInfo().name}`, problems: [] },
-        { id: "hcg-payments", name: "HCG Payments", role: "Budgets, credits, invoices, payouts", state: "not_configured", detail: ctx.billing.gateway.status().message, problems: [] },
+        { id: "hcg-payments", name: "HCG Payments", role: "Budgets, invoices (test mode only)", state: ctx.billing.gateway.status().connected ? "connected" : ctx.billing.gateway instanceof HcgPaymentsGateway ? "degraded" : "not_configured", detail: ctx.billing.gateway.status().message, problems: ctx.config.paymentsProblems },
         { id: "hcg-store", name: "HCG Store", role: "Content source (products)", state: "not_configured", detail: "Awaiting an HCG Store content contract.", problems: [] },
         { id: "hcg-ecc", name: "HCG Executive Control Center", role: "Central governance and reporting", state: "not_configured", detail: "Governance events are kept in the HCG ADS audit log until an ECC reporting contract exists.", problems: [] },
       ],
@@ -276,7 +277,26 @@ export function adminRoutes(ctx: AppContext) {
     return c.json(ctx.analytics.simulate(String(b.campaignId), Number(b.days ?? 14), actor));
   });
   app.delete("/analytics/simulated", (c) => c.json({ deleted: ctx.analytics.clearSimulated(need(c, "analytics.simulate")) }));
-  app.get("/revenue", (c) => { need(c, "revenue.read"); return c.json(ctx.billing.summary()); });
+  app.get("/revenue", async (c) => {
+    need(c, "revenue.read");
+    if (ctx.billing.gateway instanceof HcgPaymentsGateway) await ctx.billing.gateway.checkHealth();
+    return c.json(ctx.billing.summary());
+  });
+  /**
+   * TEST MODE: asks HCG Payments whether a campaign booking can be checked out. Internal campaigns
+   * are never charged. Today HCG Payments refuses every paid advertising purpose until the Owner
+   * activates it. Payment state never decides delivery.
+   */
+  app.post("/revenue/campaigns/:id/checkout-request", async (c) => {
+    const actor = need(c, "revenue.write");
+    if (ctx.config.env === "production") throw new AppError(403, "payments_disabled", "Payments are disabled in this release of HCG ADS.");
+    const gw = ctx.billing.gateway;
+    if (!(gw instanceof HcgPaymentsGateway)) throw new AppError(409, "hcg_payments_not_configured", "HCG Payments is not configured (config/payments.json). The local test-mode ledger is used.");
+    const campaign = ctx.campaigns.get(c.req.param("id"));
+    const decision = await gw.requestCheckout(campaign, c.get("principal").subject);
+    ctx.audit.record(actor, "billing.checkout_request", "campaign", campaign.id, `HCG Payments (test mode): ${decision.outcome}${decision.code ? ` (${decision.code})` : ""}`, decision);
+    return c.json(decision);
+  });
   app.post("/revenue/ledger", async (c) => c.json({ id: ctx.billing.addEntry(await body(c), need(c, "revenue.write")) }, 201));
 
   return app;

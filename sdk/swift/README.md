@@ -2,10 +2,17 @@
 
 Swift package for Apple platforms (iOS 16+, macOS 13+) implementing the HCG ADS public delivery contract, version 1.
 
-> **Status: written, not yet compiled.** This package was written in a Linux environment without a Swift
-> toolchain (no `swiftlang` package is available for the container's Ubuntu 24.04). It has **not been built, run or
-> tested** on any platform yet. Expect small compile fixes on the first `swift build` in Xcode. Do not ship it in the
-> HCG News iOS app until `swift build` and `swift test` pass and the view has been checked on a device.
+> **Status: compiled and tested by CI, not yet on a device.** No Swift toolchain exists in the development
+> container, so validation runs on GitHub's runners in `.github/workflows/native-sdks.yml`:
+> `swift build` + `swift test` on Linux (`swift:5.10`, `HCGAdsCore`), `swift build` + `swift test` on macOS
+> (`HCGAdsCore` + `HCGAdsUI`), and an `xcodebuild` build of the package for the iOS Simulator. Check the latest
+> "Native SDKs" run before relying on it. The view has not been checked on a device; do not ship it in the HCG News
+> iOS app before that.
+>
+> Changes made for compilation (25 Nov 2026, by inspection): no captured `var` in `@Sendable` closures; on Linux
+> `URLSessionTransport` wraps the completion-handler API (async URLSession availability varies by toolchain); the
+> timeout helper returns `Data` only (no non-`Sendable` tuple); explicit `UIKit` import for `UIDevice`; explicit
+> `CGFloat` conversions in the media framing.
 
 ## Modules
 

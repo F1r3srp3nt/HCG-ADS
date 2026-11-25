@@ -1,6 +1,9 @@
 #if canImport(SwiftUI)
 import SwiftUI
 import HCGAdsCore
+#if canImport(UIKit)
+import UIKit
+#endif
 #if canImport(AVKit)
 import AVKit
 #endif
@@ -155,7 +158,7 @@ struct NativeCard: View {
             if let media = ad.media, media.kind != .video {
                 MediaImage(media: media, onError: onMediaError, fill: true)
                     .frame(maxWidth: horizontal ? 120 : .infinity)
-                    .aspectRatio(media.cropAspect ?? (16.0 / 9.0), contentMode: .fit)
+                    .aspectRatio(CGFloat(media.cropAspect ?? (16.0 / 9.0)), contentMode: .fit)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(ad.sponsorName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -196,11 +199,12 @@ struct MediaImage: View {
                 case let .success(image):
                     if let crop = media.crop {
                         // Uniform scale so the crop rect's width fills the box; the box clips the rest.
-                        let scale = geo.size.width / max(crop.width, 0.0001)
+                        let scale: CGFloat = geo.size.width / CGFloat(max(crop.width, 0.0001))
+                        let yScale: CGFloat = geo.size.height / CGFloat(max(crop.height, 0.0001))
                         image.resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: scale)
-                            .offset(x: -crop.x * scale, y: -crop.y * (geo.size.height / max(crop.height, 0.0001)))
+                            .offset(x: -CGFloat(crop.x) * scale, y: -CGFloat(crop.y) * yScale)
                             .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
                     } else {
                         image.resizable()
@@ -238,7 +242,7 @@ struct VideoCreative: View {
                 .background(Capsule().fill(Color.accentColor))
                 .padding(8)
         }
-        .aspectRatio(media.width.flatMap { w in media.height.map { Double(w) / Double($0) } } ?? 16.0 / 9.0, contentMode: .fit)
+        .aspectRatio(CGFloat(media.width.flatMap { w in media.height.map { Double(w) / Double($0) } } ?? 16.0 / 9.0), contentMode: .fit)
         .background(Color.black)
     }
 }

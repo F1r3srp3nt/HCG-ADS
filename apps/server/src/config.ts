@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { join, resolve } from "node:path";
 import { z } from "zod";
+import { PaymentsConfigSchema, type PaymentsConfig } from "./billing/hcg-payments.ts";
 
 /**
  * HCG ADS server configuration.
@@ -70,6 +71,9 @@ export interface ServerConfig {
   hcgConnectProblems: string[];
   storage: { provider: "local" } | { provider: "hcg-server"; hcgServer: HcgServerStorageConfig };
   hcgNews: HcgNewsConfig | null;
+  /** HCG Payments commerce client (test mode only); null = the local test-mode ledger only. */
+  payments: PaymentsConfig | null;
+  paymentsProblems: string[];
   hcgNewsProblems: string[];
   /** Pinned shared-HCG project refs; configuration for any other project is refused. */
   knownProjectRefs: string[];
@@ -186,6 +190,17 @@ export function loadConfig(root = process.cwd(), overrides: Partial<ServerConfig
     identity = { mode: "development" };
   }
 
+  const paymentsRaw = readJson(join(configDir, "payments.json"));
+  let payments: PaymentsConfig | null = null;
+  const paymentsProblems: string[] = [];
+  if (paymentsRaw !== undefined) {
+    const parsed = PaymentsConfigSchema.safeParse(paymentsRaw);
+    if (parsed.success) payments = parsed.data;
+    else paymentsProblems.push(...parsed.error.issues.map((i) => `payments.json ${i.path.join(".")}: ${i.message}`));
+    if (forbiddenKeys(paymentsRaw).some((k) => !k.endsWith("secretEnv") && !k.endsWith("secretFile"))) {
+      payments = null; paymentsProblems.push("payments.json must not contain a secret value (use secretEnv or secretFile).");
+    }
+  }
   const storageRaw = readJson(join(configDir, "storage.json")) as { provider?: string; hcgServer?: unknown } | undefined;
   let storage: ServerConfig["storage"] = { provider: "local" };
   if (storageRaw?.provider === "hcg-server") {
@@ -204,6 +219,8 @@ export function loadConfig(root = process.cwd(), overrides: Partial<ServerConfig
     hcgConnectProblems: connect.problems,
     storage,
     hcgNews: news.config,
+    payments,
+    paymentsProblems,
     hcgNewsProblems: news.problems,
     knownProjectRefs: KNOWN_PROJECT_REFS,
     syncIntervalMs: Number(process.env.HCG_ADS_SYNC_INTERVAL_MS ?? 10 * 60 * 1000),

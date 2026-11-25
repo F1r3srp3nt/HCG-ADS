@@ -24,6 +24,7 @@ import { CampaignService } from "./campaigns/service.ts";
 import { DeliveryEngine } from "./delivery/engine.ts";
 import { AnalyticsService } from "./analytics/service.ts";
 import { BillingService, TestModePaymentsGateway } from "./billing/service.ts";
+import { HcgPaymentsGateway } from "./billing/hcg-payments.ts";
 
 export interface AppContext {
   config: ServerConfig;
@@ -107,7 +108,8 @@ export async function createContext(config: ServerConfig, o: ContextOverrides = 
   const delivery = new DeliveryEngine(db, clock, new Signer(config.deliverySecret, "delivery"), new Signer(config.deliverySecret, "preview"),
     campaigns, publishers, media, advertisers, settings, config.publicBaseUrl, allowLocalhost);
   const analytics = new AnalyticsService(db, clock, audit, campaigns);
-  const billing = new BillingService(db, clock, audit, campaigns, new TestModePaymentsGateway());
+  const billing = new BillingService(db, clock, audit, campaigns,
+    config.payments ? new HcgPaymentsGateway(config.payments, o.fetch ?? fetch) : new TestModePaymentsGateway());
 
   const timers: NodeJS.Timeout[] = [];
   const ctx: AppContext = {

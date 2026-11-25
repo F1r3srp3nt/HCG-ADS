@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>HCG.Ads.Avalonia</RootNamespace>
+    <AssemblyName>HCGAds.Avalonia</AssemblyName>
+    <Version>0.1.0</Version>
+    <Description>Avalonia controls for HCG ADS placements: plain-text rendering, visible disclosure, explicit crop or uniform fit, viewability.</Description>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.1.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HCGAds\HCGAds.csproj" />
+  </ItemGroup>
+</Project>

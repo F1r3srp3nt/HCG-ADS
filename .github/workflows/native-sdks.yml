@@ -1,0 +1,57 @@
+# Native SDK validation on GitHub-hosted runners (free for this public repository).
+# Builds and tests only: nothing is signed, packaged, published or uploaded.
+name: Native SDKs
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['sdk/**', '.github/workflows/native-sdks.yml']
+  pull_request:
+    paths: ['sdk/**', '.github/workflows/native-sdks.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  swift-linux:
+    name: Swift (Linux, HCGAdsCore)
+    runs-on: ubuntu-latest
+    container: swift:5.10
+    defaults:
+      run:
+        working-directory: sdk/swift/HCGAds
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - name: Build (HCGAdsUI compiles out without SwiftUI)
+        run: swift build
+      - name: Test
+        run: swift test
+
+  swift-apple:
+    name: Swift (macOS + iOS Simulator, HCGAdsCore + HCGAdsUI)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: sdk/swift/HCGAds
+    steps:
+      - uses: actions/checkout@v4
+      - run: xcodebuild -version && swift --version
+      - name: Build and test on macOS (includes the SwiftUI module)
+        run: swift build && swift test
+      - name: Build for the iOS Simulator (SwiftUI + AVKit + UIKit paths)
+        run: |
+          xcodebuild -scheme HCGAds-Package -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO build
+
+  dotnet:
+    name: .NET (HCGAds + HCGAds.Avalonia headless)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build (warnings are errors) and test
+        run: dotnet test sdk/dotnet/HCGAds.sln --configuration Release

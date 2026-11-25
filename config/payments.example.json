@@ -1,0 +1,13 @@
+{
+  "contractVersion": "hcg.ads.payments/1",
+  "baseUrl": "<HCG Payments base URL, e.g. http://127.0.0.1:8790 for the local test environment>",
+  "clientId": "<commerce client id HCG Payments registers for HCG ADS, e.g. hcg-ads>",
+  "secretEnv": "HCG_ADS_PAYMENTS_CLIENT_SECRET",
+  "productId": "<HCG Payments product id for HCG ADS advertising>",
+  "prices": {
+    "ads.fixed_placement": "<price id published by HCG Payments>",
+    "ads.campaign_budget": "<price id published by HCG Payments>",
+    "ads.usage_billing": "<price id published by HCG Payments>"
+  },
+  "returnOrigin": "<HCG ADS public origin>"
+}

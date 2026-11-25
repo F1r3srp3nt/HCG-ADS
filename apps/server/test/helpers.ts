@@ -76,7 +76,7 @@ export function testConfig(over: Partial<ServerConfig> = {}): ServerConfig {
     deliverySecret: Buffer.alloc(32, 7), identity: { mode: "development" }, hcgConnectProblems: [],
     storage: { provider: "local" },
     hcgNews: { environment: "test", projectURL: "https://qggdyzoydveafkmjgkpq.supabase.co", publicClientKey: ANON_KEY, publicationURL: "https://news.hakmicapitalgroup.com", approvedByFounder: true },
-    hcgNewsProblems: [], knownProjectRefs: ["qggdyzoydveafkmjgkpq"], syncIntervalMs: 60_000, adminStaticDir: null, ...over,
+    hcgNewsProblems: [], payments: null, paymentsProblems: [], knownProjectRefs: ["qggdyzoydveafkmjgkpq"], syncIntervalMs: 60_000, adminStaticDir: null, ...over,
   };
 }
 

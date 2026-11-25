@@ -8,11 +8,26 @@ public protocol HCGAdsTransport: Sendable {
     func send(_ request: URLRequest) async throws -> (Data, URLResponse)
 }
 
-public struct URLSessionTransport: HCGAdsTransport {
+public struct URLSessionTransport: HCGAdsTransport, @unchecked Sendable {
     let session: URLSession
     public init(session: URLSession = .shared) { self.session = session }
     public func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
-        try await session.data(for: request)
+        #if canImport(FoundationNetworking)
+        // Linux Foundation: wrap the completion-handler API (async URLSession APIs vary by toolchain).
+        return try await withCheckedThrowingContinuation { continuation in
+            session.dataTask(with: request) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let data, let response {
+                    continuation.resume(returning: (data, response))
+                } else {
+                    continuation.resume(throwing: URLError(.badServerResponse))
+                }
+            }.resume()
+        }
+        #else
+        return try await session.data(for: request)
+        #endif
     }
 }
 
@@ -89,7 +104,8 @@ public actor HCGAdsClient {
         if let appId = configuration.appId { req.setValue(appId, forHTTPHeaderField: "X-HCG-App-Id") }
         do {
             req.httpBody = try JSONEncoder().encode(body)
-            let (data, _) = try await withTimeout(configuration.timeout) { [transport] in try await transport.send(req) }
+            let request = req
+            let data = try await withTimeout(configuration.timeout) { [transport] in try await transport.send(request).0 }
             return Self.interpret(data)
         } catch {
             log("request failed: \(error)")

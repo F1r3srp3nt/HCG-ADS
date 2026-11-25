@@ -11,7 +11,8 @@ import { aspectRatio } from "../placements/compat.ts";
 const PLATFORMS = ["web", "ios", "android", "macos", "windows", "linux", "desktop"] as const;
 const KINDS = ["image", "animated-image", "video", "native"] as const;
 
-const originSchema = z.string().regex(/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i, "An origin looks like https://example.com");
+/** Web test origins (https://host[:port]) and native test apps (app://<bundle or app identifier>). */
+const originSchema = z.string().regex(/^(https?:\/\/[a-z0-9.-]+(:\d+)?|app:\/\/[a-zA-Z0-9.\-_]+)$/i, "A test origin looks like https://example.com or app://com.example.app");
 const domainSchema = z.string().regex(/^[a-z0-9.-]+\.[a-z]{2,}$/i, "Enter a domain such as news.example.com");
 
 export const PublisherInput = z.object({

@@ -93,6 +93,20 @@ describe("delivery engine", () => {
     expect(totals).toMatchObject({ impressions: 0, clicks: 0, invalid: 3 });
   });
 
+  it("native apps receive test delivery only when registered as an app test origin", async () => {
+    const h = await harness();
+    const { placements } = await h.connectNews();
+    const ios = placements.find((p: any) => p.slot === "ios-native-card");
+    await h.liveInternalCampaign(article(1).id, [ios.id]);
+    const ask = async () => (await h.api("POST", "/delivery/v1/ad", { placement: ios.publicKey }, { "x-hcg-app-id": "com.hakmicapitalgroup.hcgnews" })).body;
+    expect((await ask()).reason).toBe("app_not_registered_for_test");
+    const pub = (await h.api("GET", "/admin/v1/publishers/pub_hcg_news")).body;
+    const r = await h.api("PATCH", "/admin/v1/publishers/pub_hcg_news", { testOrigins: [...pub.testOrigins, "app://com.hakmicapitalgroup.hcgnews"] });
+    expect(r.status).toBe(200);
+    expect((await ask()).ad).not.toBeNull();
+    expect((await h.api("PATCH", "/admin/v1/publishers/pub_hcg_news", { testOrigins: ["javascript://x"] })).status).toBe(422);
+  });
+
   it("returns a safe empty response for malformed requests", async () => {
     const h = await harness();
     const r = await h.app.request("/delivery/v1/ad", { method: "POST", body: "not json", headers: { "content-type": "application/json" } });

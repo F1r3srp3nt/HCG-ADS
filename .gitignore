@@ -12,3 +12,4 @@ playwright-report/
 config/hcg-connect.json
 config/local.json
 config/storage.json
+config/payments.json

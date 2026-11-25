@@ -52,7 +52,7 @@ time { font-size: 12.5px; color: var(--muted); }
 .stories.compact .story h2 { font-size: 18px; }
 
 .article { max-width: 720px; }
-.back { font-size: 13px; color: var(--muted); text-decoration: none; display: inline-block; margin-bottom: 14px; }
+.back { font-size: 13px; color: var(--muted); text-decoration: none; display: inline-block; margin: 0 16px 14px 0; }
 .headline { font: 700 40px/1.12 var(--serif); margin: 8px 0 10px; letter-spacing: -.01em; }
 .subtitle { font: 400 20px/1.4 var(--serif); color: var(--muted); margin: 0 0 10px; }
 .cover { margin: 18px 0; }

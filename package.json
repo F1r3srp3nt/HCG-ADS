@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "npm run dev -w @hcg-ads/server",
     "dev:admin": "npm run dev -w @hcg-ads/admin",
-    "build": "npm run build -w @hcg-ads/sdk && npm run build -w @hcg-ads/admin",
+    "build": "npm run build -w @hcg-ads/sdk && npm run build -w @hcg-ads/react && npm run build -w @hcg-ads/admin",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "acceptance": "node scripts/acceptance.mjs"

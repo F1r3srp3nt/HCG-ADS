@@ -125,7 +125,10 @@ export function adminRoutes(ctx: AppContext) {
   app.post("/integrations/hcg-news/connect", async (c) => {
     const actor = need(c, "content_sources.write", "publishers.write", "publishers.approve");
     const b = await c.req.json().catch(() => ({}));
-    const testOrigins: string[] = Array.isArray(b.testOrigins) ? b.testOrigins : ["http://127.0.0.1:7800", "http://localhost:7800"];
+    // Default test origin: this HCG ADS instance itself (which serves the HCG News test environment at /testbed/).
+    const own = new URL(ctx.config.publicBaseUrl);
+    const testOrigins: string[] = Array.isArray(b.testOrigins) ? b.testOrigins
+      : [own.origin, ...(own.hostname === "127.0.0.1" ? [`${own.protocol}//localhost${own.port ? ":" + own.port : ""}`] : [])];
     const source = await ctx.sources.connect(SOURCE_IDS["hcg-news"], actor);
     const publisher = ctx.publishers.registerHcgNews(actor, testOrigins);
     return c.json({ source, publisher, placements: ctx.publishers.placements(HCG_NEWS_PUBLISHER_ID) });

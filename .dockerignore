@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+data
+test-results
+**/dist
+!apps/admin/dist
+!packages/sdk-js/dist
+sdk
+examples
+.git
+config/hcg-connect.json
+config/storage.json
+config/payments.json
+config/local.json
+*.db

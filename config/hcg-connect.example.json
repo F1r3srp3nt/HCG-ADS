@@ -4,17 +4,20 @@
   "jwksEndpoint": "https://qggdyzoydveafkmjgkpq.supabase.co/auth/v1/.well-known/jwks.json",
   "apiBaseUrl": "https://beta.hakmicapitalgroup.com",
   "ecosystemApiPath": "/api/public/ecosystem/v1",
-  "productId": "<ERP App Access product key issued by HCG for HCG ADS>",
+  "productId": "<product id HCG registers for HCG ADS; requested: hcg.ads>",
   "roleFeatures": {
-    "founder": "<feature key>",
-    "ads_administrator": "<feature key>",
-    "campaign_manager": "<feature key>",
-    "publisher_administrator": "<feature key>",
-    "advertiser": "<feature key>",
-    "creative_reviewer": "<feature key>",
-    "finance_administrator": "<feature key>",
-    "analytics_viewer": "<feature key>"
+    "ads_administrator": "<feature key; requested: ads.administrator>",
+    "campaign_manager": "<feature key; requested: ads.campaign.manage>",
+    "publisher_administrator": "<feature key; requested: ads.publisher.manage>",
+    "advertiser": "<feature key; requested: ads.advertiser>",
+    "creative_reviewer": "<feature key; requested: ads.creative.review>",
+    "finance_administrator": "<feature key; requested: ads.finance>",
+    "analytics_viewer": "<feature key; requested: ads.analytics.view>"
   },
   "trustedClientIds": [],
-  "organisationId": null
+  "organisationId": "2bdefe45-3bf4-466a-865e-8d4b4ac17462",
+  "webClient": {
+    "clientId": "<UUID issued by HCG for hcg-ads-web-production>",
+    "redirectUri": "https://ads.hakmicapitalgroup.com/auth/callback"
+  }
 }

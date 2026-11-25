@@ -263,6 +263,17 @@ export function adminRoutes(ctx: AppContext) {
     });
   });
 
+  // ---- Reports (moderation queue) -----------------------------------------------
+
+  app.get("/reports", (c) => { need(c, "governance.read"); return c.json({ reports: ctx.transparency.list(c.req.query("status")) }); });
+  app.post("/reports/:id/resolve", async (c) => {
+    const actor = need(c, "creatives.moderate");
+    const b = await body(c);
+    if (!["none", "pause_campaign", "reject_campaign"].includes(b.action)) throw invalid("action must be none, pause_campaign or reject_campaign.");
+    ctx.transparency.resolve(c.req.param("id"), String(b.resolution ?? ""), b.action, actor);
+    return c.json({ resolved: true });
+  });
+
   // ---- Analytics & revenue ----------------------------------------------------
 
   app.get("/analytics", (c) => {

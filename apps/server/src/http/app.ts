@@ -41,6 +41,7 @@ export function createApp(ctx: AppContext) {
     await next();
     c.header("x-content-type-options", "nosniff");
     c.header("x-frame-options", c.req.path.startsWith("/testbed") ? "SAMEORIGIN" : "DENY");
+    if (ctx.config.publicBaseUrl.startsWith("https://")) c.header("strict-transport-security", "max-age=31536000; includeSubDomains");
   });
 
   // Administration API: CORS only for the registered command-center origins.
@@ -61,6 +62,23 @@ export function createApp(ctx: AppContext) {
   app.route("/auth", authRoutes(ctx));
   app.route("/admin/v1", adminRoutes(ctx));
   app.route("/delivery/v1", deliveryRoutes(ctx));
+
+  /** Readiness for an operator: what is configured, without revealing any value. */
+  app.get("/readyz", async (c) => {
+    const id = ctx.identity.status();
+    const storage = await ctx.media.storageStatus().catch((e: Error) => ({ ok: false, message: e.message }));
+    const checks = {
+      identity: { ok: id.mode === "hcg-connect" ? id.configured : ctx.config.env !== "production", detail: id.label },
+      webSignIn: { ok: id.mode !== "hcg-connect" || id.signInAvailable === true, detail: id.signInAvailable ? "available" : "web client not issued" },
+      storage: { ok: storage.ok, detail: ctx.media.storageName },
+      hcgNews: { ok: !!ctx.config.hcgNews, detail: ctx.config.hcgNews ? "public read configured" : "not configured" },
+      liveDelivery: { ok: true, detail: ctx.config.liveDeliveryEnabled ? "ENABLED" : "off (test origins only)" },
+      payments: { ok: true, detail: ctx.config.payments ? "HCG Payments (test mode only)" : "local test-mode ledger" },
+      emergencyShutdown: { ok: true, detail: ctx.settings.get().emergencyShutdown.active ? "ACTIVE" : "off" },
+    };
+    const ready = Object.values(checks).every((x) => x.ok);
+    return c.json({ ready, environment: ctx.config.env, checks }, ready ? 200 : 503);
+  });
 
   app.get("/healthz", (c) => c.json({ status: "ok", product: "hcg.ads", version: PRODUCT_VERSION, contractVersion: CONTRACT_VERSION, environment: ctx.config.env }));
 

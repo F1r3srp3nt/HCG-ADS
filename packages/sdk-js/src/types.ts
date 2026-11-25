@@ -60,6 +60,7 @@ export interface RenderableAd {
   media: AdMedia | null;
   frequency: { count: number; windowHours: number } | null;
   beacons: { impression: string; viewable: string; video: string };
+  transparencyUrl?: string;
   preview: boolean;
 }
 

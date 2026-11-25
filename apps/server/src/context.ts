@@ -25,6 +25,7 @@ import { DeliveryEngine } from "./delivery/engine.ts";
 import { AnalyticsService } from "./analytics/service.ts";
 import { BillingService, TestModePaymentsGateway } from "./billing/service.ts";
 import { HcgPaymentsGateway } from "./billing/hcg-payments.ts";
+import { TransparencyService } from "./governance/transparency.ts";
 
 export interface AppContext {
   config: ServerConfig;
@@ -41,6 +42,7 @@ export interface AppContext {
   delivery: DeliveryEngine;
   analytics: AnalyticsService;
   billing: BillingService;
+  transparency: TransparencyService;
   shutdown(): void;
 }
 
@@ -106,14 +108,15 @@ export async function createContext(config: ServerConfig, o: ContextOverrides = 
   sources.onItemUnavailable = (sourceId, externalId, reason) => campaigns.suspendForContent(sourceId, externalId, reason);
 
   const delivery = new DeliveryEngine(db, clock, new Signer(config.deliverySecret, "delivery"), new Signer(config.deliverySecret, "preview"),
-    campaigns, publishers, media, advertisers, settings, config.publicBaseUrl, allowLocalhost);
+    campaigns, publishers, media, advertisers, settings, config.publicBaseUrl, allowLocalhost, config.liveDeliveryEnabled);
   const analytics = new AnalyticsService(db, clock, audit, campaigns);
   const billing = new BillingService(db, clock, audit, campaigns,
     config.payments ? new HcgPaymentsGateway(config.payments, o.fetch ?? fetch) : new TestModePaymentsGateway());
 
+  const transparency = new TransparencyService(db, clock, audit, campaigns, advertisers, publishers, config.publicBaseUrl);
   const timers: NodeJS.Timeout[] = [];
   const ctx: AppContext = {
-    config, db, clock, audit, settings, identity, sources, publishers, advertisers, media, campaigns, delivery, analytics, billing,
+    config, db, clock, audit, settings, identity, sources, publishers, advertisers, media, campaigns, delivery, analytics, billing, transparency,
     shutdown() { timers.forEach(clearInterval); db.close(); },
   };
   (ctx as AppContext & { startSchedulers(): void }).startSchedulers = () => {

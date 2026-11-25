@@ -6,12 +6,12 @@ advertisers next.
 
 | | |
 |---|---|
-| Version | 0.1.0 — development build, **not deployed** |
+| Version | 0.2.0 — development build, **not deployed** (production advertising and payments disabled) |
 | Publisher | Hakmi Capital Group · first publisher and content source: **HCG News** |
 | Proposed domain | `ads.hakmicapitalgroup.com` (not yet hosted) |
-| Identity | HCG Connect + ERP App Access (no separate account system) |
+| Identity | HCG Connect sign-in (PKCE, server-owned sessions) + ERP App Access roles; no separate account system |
 | Media | Local development storage, or HCG Server (adapter tested against the real agent) |
-| Payments | Test mode only — HCG Payments is not connected; no money moves |
+| Payments | Test mode only — HCG Payments client verified against its test-mode service; every paid ads purpose is refused until approved |
 
 **Engineering principle: everything is interchangeable.** Identity, content sources, storage, media processing
 and payments each sit behind an interface chosen in one place (`apps/server/src/context.ts`).
@@ -50,15 +50,19 @@ To work on the command center with hot reload, run `npm run dev:admin` alongside
 | `apps/admin` | HCG ADS command center (React) |
 | `packages/sdk-js` | Web SDK (`@hcg-ads/sdk`): placements, rendering in Shadow DOM, consent, frequency limits, beacons, fallback |
 | `packages/sdk-react` | React bindings (`@hcg-ads/react`) |
-| `sdk/swift` | Swift / SwiftUI SDK (written, **not yet compiled** — no Swift toolchain here) |
-| `sdk/dotnet` | Interface specification for the future .NET / Avalonia SDK |
+| `sdk/swift` | Swift / SwiftUI SDK (compiled and tested on GitHub: Linux, macOS, iOS Simulator) |
+| `sdk/dotnet` | .NET SDK (netstandard2.0 + net8.0) with an Avalonia control |
+| `integrations/` | Prepared, unapplied integrations (HCG News website component) |
+| `Dockerfile` | Production image (not deployed); see docs/PRODUCTION-DEPLOY.md |
 | `examples/hcg-news-testbed` | HCG News test environment: real published articles + HCG ADS placements |
 | `config/` | `hcg-news.json` (public read values), templates for HCG Connect and HCG Server storage |
 | `docs/` | Architecture, API, privacy & governance, status, and the integration request awaiting approval |
 
 ## Documentation
 
-- [docs/STATUS.md](docs/STATUS.md) — what is implemented, tested, simulated and outstanding; acceptance results
+- [docs/STATUS.md](docs/STATUS.md) — v0.2.0 objectives, evidence and what needs you
+- [docs/HCG-CONNECT-REGISTRATION-REQUEST.md](docs/HCG-CONNECT-REGISTRATION-REQUEST.md) — central registration request (ERP)
+- [docs/PRODUCTION-DEPLOY.md](docs/PRODUCTION-DEPLOY.md) — production hosting preparation
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — modules, interfaces, how existing HCG infrastructure is used
 - [docs/API.md](docs/API.md) — administration and delivery APIs, campaign lifecycle
 - [docs/PRIVACY-AND-GOVERNANCE.md](docs/PRIVACY-AND-GOVERNANCE.md) — data collected, consent, retention, ad standards

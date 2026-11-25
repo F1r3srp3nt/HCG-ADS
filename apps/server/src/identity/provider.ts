@@ -151,7 +151,7 @@ export class HcgConnectIdentityProvider implements IdentityProvider {
     const me = await this.meFor(claims.sub, token);
     const meta = (claims.user_metadata ?? {}) as Record<string, unknown>;
     return this.principal(claims.sub, me.displayName ?? String(meta.full_name ?? meta.name ?? claims.email ?? "HCG account"),
-      me.email ?? (typeof claims.email === "string" ? claims.email : undefined), this.organisationFor(me), token, opts, undefined);
+      me.email ?? (typeof claims.email === "string" ? claims.email : undefined), this.organisationFor(me), token, opts, undefined, me.founderPolicy);
   }
 
   private async fromSession(sid: string, opts: AuthenticateOptions): Promise<Principal> {
@@ -175,7 +175,7 @@ export class HcgConnectIdentityProvider implements IdentityProvider {
       }
     }
     try {
-      return await this.principal(s.subject, s.displayName, s.email ?? undefined, s.organisationId ?? (s.founderPolicy ? FOUNDER_NO_ORG : null), token, opts, s.csrfToken);
+      return await this.principal(s.subject, s.displayName, s.email ?? undefined, s.organisationId ?? (s.founderPolicy ? FOUNDER_NO_ORG : null), token, opts, s.csrfToken, s.founderPolicy);
     } catch (e) {
       if (e instanceof AppError && e.code === "hcg_session_ended") this.sessions!.destroyByHash(s.idHash);
       throw e;
@@ -200,9 +200,11 @@ export class HcgConnectIdentityProvider implements IdentityProvider {
   }
 
   private async principal(subject: string, displayName: string, email: string | undefined, org: string | null, token: string,
-                          opts: AuthenticateOptions, csrfToken: string | undefined): Promise<Principal> {
+                          opts: AuthenticateOptions, csrfToken: string | undefined, founderPolicy = false): Promise<Principal> {
     if (!org) throw new AppError(403, "no_organisation", "Your HCG account has no organisation for HCG ADS. Access is governed centrally.");
     const roles = await this.rolesFor(subject, org, token, !!opts.fresh);
+    // The HCG ADS founder role comes from HCG's own central Founder policy (/me product_policy), not a local list.
+    if (founderPolicy && !roles.includes("founder")) roles.unshift("founder");
     if (roles.length === 0) throw new AppError(403, "no_hcg_ads_role", "Your HCG account has no HCG ADS role. Access is granted centrally in HCG (ERP App Access).");
     return {
       subject, displayName, email, roles, permissions: permissionsFor(roles), authority: "hcg-connect",

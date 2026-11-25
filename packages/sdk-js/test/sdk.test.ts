@@ -201,3 +201,17 @@ describe("auto-scan", () => {
     expect(body.placement).toBe("plc_pub_x");
   });
 });
+
+describe("Why this ad?", () => {
+  it("adds an information link beside the ad (never nested inside it) and refuses unsafe URLs", () => {
+    const host = document.createElement("div");
+    renderAd(host, ad({ transparencyUrl: "https://ads.example/delivery/v1/transparency/tok" }), { id: "p", width: 300, height: 250, responsive: "fixed", fallback: "collapse" }, { clickUrl: "https://ads.example/click" });
+    const why = host.querySelector("a.why") as HTMLAnchorElement;
+    expect(why.href).toBe("https://ads.example/delivery/v1/transparency/tok");
+    expect(why.closest("a.hcg-ad")).toBeNull();
+    expect(why.getAttribute("aria-label")).toMatch(/^Why this ad\?/);
+    const bad = document.createElement("div");
+    renderAd(bad, ad({ transparencyUrl: "javascript:alert(1)" }), null, { clickUrl: "https://ads.example/click" });
+    expect(bad.querySelector("a.why")).toBeNull();
+  });
+});

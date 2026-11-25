@@ -78,6 +78,13 @@ export interface ServerConfig {
   /** Pinned shared-HCG project refs; configuration for any other project is refused. */
   knownProjectRefs: string[];
   syncIntervalMs: number;
+  /**
+   * Server-level switch for live advertising. Off unless HCG_ADS_LIVE_DELIVERY=enabled: while off,
+   * every publisher is served as in test mode (registered test origins only), whatever its stored mode.
+   */
+  liveDeliveryEnabled: boolean;
+  /** Use X-Forwarded-For for abuse limits (only behind a trusted reverse proxy). */
+  trustProxy: boolean;
   adminStaticDir: string | null;
 }
 
@@ -224,6 +231,8 @@ export function loadConfig(root = process.cwd(), overrides: Partial<ServerConfig
     hcgNewsProblems: news.problems,
     knownProjectRefs: KNOWN_PROJECT_REFS,
     syncIntervalMs: Number(process.env.HCG_ADS_SYNC_INTERVAL_MS ?? 10 * 60 * 1000),
+    liveDeliveryEnabled: process.env.HCG_ADS_LIVE_DELIVERY === "enabled",
+    trustProxy: process.env.HCG_ADS_TRUST_PROXY === "true",
     adminStaticDir: existsSync(resolve(root, "apps/admin/dist")) ? resolve(root, "apps/admin/dist") : null,
     ...overrides,
   };
@@ -237,6 +246,9 @@ export function assertSafe(c: ServerConfig): void {
   const loopback = ["127.0.0.1", "localhost", "::1"].includes(c.host);
   if (c.identity.mode === "development" && c.env === "production") {
     throw new Error("The development identity provider cannot be used in production. Configure HCG Connect.");
+  }
+  if (c.env === "production" && !process.env.HCG_ADS_DELIVERY_SECRET && !c.deliverySecret.length) {
+    throw new Error("Production requires HCG_ADS_DELIVERY_SECRET from the secret store (at least 32 characters).");
   }
   if (c.env === "production" && !c.publicBaseUrl.startsWith("https://")) {
     throw new Error("Production requires an https:// public URL (HCG_ADS_PUBLIC_URL): session cookies are Secure-only.");

@@ -85,6 +85,53 @@ export function Approvals() {
           <ul className="list">{data.publishers.map((p) => <li key={p.id}><PublisherReview p={p} /></li>)}</ul>
         </Panel>
       )}
+      <ReportsQueue />
+    </div>
+  );
+}
+
+interface AdReport {
+  id: string; at: string; campaignId: string; campaignName: string | null; campaignState: string | null;
+  reason: string; reasonLabel: string; details: string | null; status: string;
+}
+
+/** Anonymous reports from "Why this ad?". Serious reports pause a campaign automatically until reviewed. */
+function ReportsQueue() {
+  const can = useCan();
+  const { data, error } = useLoad<{ reports: AdReport[] }>(can("governance.read") ? "/reports?status=open" : null);
+  if (!can("governance.read")) return null;
+  return (
+    <Panel title={`Reported ads (${data?.reports.length ?? 0})`} subtitle="Anonymous reports from readers. Three serious reports within 24 hours pause a campaign until reviewed.">
+      <ErrorBox error={error} />
+      {data && data.reports.length === 0 && <Empty title="No open reports" />}
+      <ul className="list">{data?.reports.map((r) => <li key={r.id}><ReportRow r={r} canResolve={can("creatives.moderate")} /></li>)}</ul>
+    </Panel>
+  );
+}
+
+function ReportRow({ r, canResolve }: { r: AdReport; canResolve: boolean }) {
+  const act = useAction();
+  const confirm = useConfirm();
+  const resolve = async (action: "none" | "pause_campaign" | "reject_campaign") => {
+    const r2 = await confirm.ask({ title: "Resolve report", body: "Describe the outcome of your review. It is kept in the audit log.", confirmLabel: "Resolve",
+      danger: action !== "none", requireNote: true, noteLabel: "Outcome of the review" });
+    if (r2.ok) await act.run(() => api.post(`/reports/${r.id}/resolve`, { action, resolution: r2.note }));
+  };
+  return (
+    <div className="list-row">
+      {confirm.element}
+      <span className="grow">
+        <b>{r.reasonLabel}</b> · <a href={`#/campaigns/${r.campaignId}`}>{r.campaignName ?? r.campaignId}</a> {r.campaignState && <Chip value={r.campaignState} />}
+        <small>{fmt.dateTime(r.at)}{r.details ? ` · “${r.details}”` : ""}</small>
+        <ErrorBox error={act.error} />
+      </span>
+      {canResolve && (
+        <span className="row">
+          <Button small busy={act.busy} onClick={() => void resolve("none")}>No action</Button>
+          <Button small busy={act.busy} onClick={() => void resolve("pause_campaign")}>Pause campaign</Button>
+          <Button small variant="danger" busy={act.busy} onClick={() => void resolve("reject_campaign")}>Return to draft</Button>
+        </span>
+      )}
     </div>
   );
 }

@@ -1,4 +1,49 @@
-# Status — HCG ADS 0.1.0 (25 November 2026)
+# Status — HCG ADS 0.2.0 (25 November 2026)
+
+Development build. **Not deployed. No live advertisements. No payments.** Production advertising and payments are
+disabled by default. Zero Lovable credits used.
+
+## v0.2.0 production-readiness objectives
+
+| Objective | State | Evidence |
+|---|---|---|
+| HCG Connect sign-in | **Implemented per HCG's verified contracts.** Authorization code + PKCE S256 + state + nonce against live-discovered endpoints; ID and access tokens verified; server-owned sessions (HttpOnly cookie, tokens sealed AES-256-GCM, never sent to the browser); CSRF + Origin on writes; refresh; `/me` for identity and organisations; roles from ERP App Access `/check`, fresh for consequential actions; founder role only from HCG's Founder policy. **Unavailable until HCG issues the web client** (no client invented). The old paste-a-token screen is removed. | `test/signin.test.ts` (simulated HCG, ES256) · `scripts/signin-browser-check.mjs`: 8/8 in Chromium against a **local stand-in** (HCG's real consent page not yet exercisable) |
+| Central product and role registration | **Request prepared**: `hcg.ads` registry entry, 7 role feature keys, 2 web clients on the main site's §7 template | [HCG-CONNECT-REGISTRATION-REQUEST.md](HCG-CONNECT-REGISTRATION-REQUEST.md) |
+| Production hosting preparation | **Prepared, not deployed.** Dockerfile (non-root, `/data` volume, healthcheck), `/readyz`, HSTS, production guards (https only, delivery secret required, dev identity refused), server-level `HCG_ADS_LIVE_DELIVERY` switch (default off) | Production-mode run: admin 503 fail-closed, readiness explains, live off. CI `container-image` job builds and probes the image on GitHub (Docker builds cannot fetch packages in this container) · [PRODUCTION-DEPLOY.md](PRODUCTION-DEPLOY.md) |
+| HCG News SDK integration | **Component prepared, not applied.** The HCG News site's source is not in any available repository, so no patch could be verified against it | `integrations/hcg-news-website/` (inert until configured; typechecked against React 19) · request §A |
+| HCG Store futuristic theme | **Implemented**: SDK themes `hcg-news` (default, unchanged), `hcg-store` (from the Store's tokens), `custom`; disclosure contrast ≥ 4.5:1 tested; Store testbed | 8 theme tests · `/testbed-store/` |
+| HCG Store content source | **Implemented**: listed catalogue products only; drafts never shown; becomes active once the Store publishes its catalogue at a URL | `test/store-source.test.ts` with the real catalogue |
+| HCG Representation creative assets | **Not available**: HCG Store lists it as a draft with no published description, media or status. Nothing invented; it appears automatically through the Store source once published | Store catalogue entry `hcg-representation` (draft) |
+| HCG Server media storage | **Adapter verified** against the real `hcg-agent` (unchanged since v0.1.0); production guide recommends HCG Server as storage behind HCG ADS, not as a public host | `test/hcg-server.test.ts` (run with `HCG_SERVER_AGENT`) |
+| HCG Payments test-mode integration | **Implemented** per HCG Payments API v1 and its ADS purposes contract; **verified against the real HCG Payments service** running locally in test mode: signed client accepted, every paid ads purpose refused (`purpose_not_activated`), wrong secret refused; internal campaigns never sent; production refuses checkout requests | `test/hcg-payments.test.ts` (6 tests, 3 live with `HCG_PAYMENTS_URL`) |
+| Swift and .NET SDK validation | **Validated natively on GitHub's runners**: Swift build + tests on Linux; Swift build + tests on macOS and an iOS Simulator build (SwiftUI/AVKit/UIKit); .NET SDK (netstandard2.0 + net8.0) + Avalonia control, build with warnings as errors + tests | GitHub Actions "Native SDKs" run 45660844160: 3/3 jobs green · .NET live run recorded one impression |
+| Advertising governance and privacy | **Implemented**: "Why this ad?" (sponsor, who paid, main parameters, no personal data; DSA Art. 26 spirit) on every ad; anonymous reporting; automatic pause after 3 serious reports in 24 h; reviewer queue; records of processing and DPIA screening | `test/transparency.test.ts` · [PRIVACY-AND-GOVERNANCE.md](PRIVACY-AND-GOVERNANCE.md) |
+
+Also fixed: native apps could not receive test delivery (publishers rejected `app://` test origins).
+
+**Tests:**
+- server: 51 passed, plus 4 that run only against real services (HCG Server agent, HCG Payments; all passed when run);
+- web SDK: 27;
+- .NET: 15 + 4;
+- Swift: on CI;
+- 12-step browser acceptance: **12/12** (unchanged);
+- sign-in browser check: 8/8 (local stand-in).
+
+## What needs you or another team
+
+| Item | Who |
+|---|---|
+| Register `hcg.ads`, its feature keys and the two web clients | HCG Owner (ERP), [request](HCG-CONNECT-REGISTRATION-REQUEST.md) |
+| Add the placement component to the HCG News site | HCG News (GitHub commit or one Lovable prompt) |
+| Publish the HCG Store catalogue at a URL (e.g. `/catalogue/products.json`) | HCG Store |
+| Publish HCG Representation's details and assets | HCG |
+| Register an `hcg-ads` commerce client and ads prices in HCG Payments; approve an ads purpose | HCG Payments + Owner |
+| Choose a host; set `HCG_ADS_LIVE_DELIVERY=enabled` only at go-live | Founder |
+
+---
+
+# v0.1.0 status (kept for reference)
+
 
 Development build. **Not deployed. No live advertisements. No payments.**
 

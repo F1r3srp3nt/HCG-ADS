@@ -1,8 +1,9 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -47,3 +48,25 @@ jobs:
         if: steps.hcgserver.outcome == 'success'
         run: HCG_SERVER_AGENT=${{ github.workspace }}/hcg-agent npx vitest run test/hcg-server.test.ts
         working-directory: apps/server
+
+  container-image:
+    # Builds the production image (with ffmpeg), starts it with production settings and checks that it fails
+    # closed: no admin access without HCG Connect, readiness reports why, live delivery off. Nothing is pushed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t hcg-ads:ci .
+      - name: Start with production settings
+        run: |
+          docker run -d --name ads -p 7800:7800 -e HCG_ADS_PUBLIC_URL=https://ads.example.test \
+            -e HCG_ADS_DELIVERY_SECRET=ci-only-not-a-real-secret-0123456789abcdef hcg-ads:ci
+          for i in $(seq 1 60); do curl -fs http://127.0.0.1:7800/healthz && break; sleep 1; done
+      - name: Fails closed
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:7800/admin/v1/session)" = "503"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:7800/readyz)" = "503"
+          curl -s http://127.0.0.1:7800/readyz | grep -q '"off (test origins only)"'
+          docker exec ads ffmpeg -version | head -1
+          docker exec ads id -u | grep -qv '^0$'
+      - if: always()
+        run: docker logs ads || true

@@ -61,6 +61,8 @@ export class DeliveryEngine {
     private settings: SettingsService,
     private baseUrl: string,
     private allowLocalhost: boolean,
+    /** Server-level live switch (HCG_ADS_LIVE_DELIVERY); off = test origins only, everywhere. */
+    private liveDeliveryEnabled = false,
   ) {}
 
   previewToken(campaignId: string, creativeId?: string): string {
@@ -73,12 +75,12 @@ export class DeliveryEngine {
       if (!from.origin) return "missing_origin";
       let host: string, origin: string;
       try { const u = new URL(from.origin); host = u.hostname.toLowerCase(); origin = u.origin; } catch { return "bad_origin"; }
-      if (pub.deliveryMode === "test") return pub.testOrigins.includes(origin) ? null : "origin_not_registered_for_test";
+      if (pub.deliveryMode === "test" || !this.liveDeliveryEnabled) return pub.testOrigins.includes(origin) ? null : "origin_not_registered_for_test";
       const ok = pub.domains.some((d) => host === d || host === `www.${d}`) && origin.startsWith("https://");
       return ok ? null : "origin_not_registered";
     }
     if (!from.appId || !pub.appIdentifiers.includes(from.appId)) return "app_not_registered";
-    if (pub.deliveryMode === "test" && !pub.testOrigins.includes(`app://${from.appId}`)) return "app_not_registered_for_test";
+    if ((pub.deliveryMode === "test" || !this.liveDeliveryEnabled) && !pub.testOrigins.includes(`app://${from.appId}`)) return "app_not_registered_for_test";
     return null;
   }
 
@@ -227,6 +229,7 @@ export class DeliveryEngine {
       media,
       frequency: c.frequencyLimit,
       beacons: { impression: beacon("impression"), viewable: beacon("viewable"), video: beacon("video") },
+      transparencyUrl: `${this.baseUrl}/delivery/v1/transparency/${token}`,
       preview,
     };
     void req;

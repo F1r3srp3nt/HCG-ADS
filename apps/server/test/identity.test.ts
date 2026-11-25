@@ -21,7 +21,7 @@ async function setup(answer: (feature: string) => Response | Promise<Response>) 
   const fetchImpl = (async (url: string, init: RequestInit) => {
     if (String(url).endsWith("/me")) {
       return Response.json({ api_version: "v1", user: { id: SUB, email: "founder@example.com", display_name: "Founder" },
-        organisations: [{ org_id: "2bdefe45-3bf4-466a-865e-8d4b4ac17462", slug: "hcg" }], product_policy: { active: true } });
+        organisations: [{ org_id: "2bdefe45-3bf4-466a-865e-8d4b4ac17462", slug: "hcg" }], product_policy: { active: false } });
     }
     const body = JSON.parse(String(init.body));
     calls.push({ body, auth: (init.headers as Record<string, string>).authorization });

@@ -14,7 +14,7 @@ const BASE = "http://127.0.0.1:7800";
  * contracts (managed OAuth discovery, PKCE S256, nonce, `aud` = client for ID tokens and
  * `authenticated` for access tokens, `/me`, `/check`). Real ES256 signatures.
  */
-async function fakeHcg(opts: { roles?: Record<string, boolean>; webClient?: boolean } = {}) {
+async function fakeHcg(opts: { roles?: Record<string, boolean>; webClient?: boolean; founder?: boolean } = {}) {
   const { publicKey, privateKey } = await generateKeyPair("ES256");
   const jwks = createLocalJWKSet({ keys: [{ ...(await exportJWK(publicKey)), kid: "k1", alg: "ES256" }] });
   const pending = new Map<string, { challenge: string; nonce: string; redirect: string }>();
@@ -63,7 +63,7 @@ async function fakeHcg(opts: { roles?: Record<string, boolean>; webClient?: bool
     if (url.pathname.endsWith("/ecosystem/v1/me")) {
       if (state.revoked) return Response.json({ error: { code: "unauthorized" } }, { status: 401 });
       return Response.json({ api_version: "v1", user: { id: SUB, email: "founder@example.com", display_name: "F1r3srp3nt - CEO & Founder" },
-        organisations: [{ org_id: ORG, slug: "hcg", name: "Hakmi Capital Group" }], product_policy: { active: true }, revalidate_after_seconds: 60 });
+        organisations: [{ org_id: ORG, slug: "hcg", name: "Hakmi Capital Group" }], product_policy: { active: opts.founder !== false }, revalidate_after_seconds: 60 });
     }
     if (url.pathname.endsWith("/ecosystem/v1/check")) {
       const b = JSON.parse(String(init.body));
@@ -184,12 +184,25 @@ describe("HCG Connect web sign-in (authorization code + PKCE, server-owned sessi
   });
 
   it("an account without an HCG ADS role gets nothing", async () => {
-    const { h, consent } = await fakeHcg({ roles: {} });
+    const { h, consent } = await fakeHcg({ roles: {}, founder: false });
     const login = await h.app.request("/auth/login");
     const cookie = cookieOf(await h.app.request(consent(login.headers.get("location")!)));
     const r = await h.api("GET", "/admin/v1/session", undefined, { cookie });
     expect(r.status).toBe(403);
     expect(r.body.error.code).toBe("no_hcg_ads_role");
+  });
+
+  it("the founder role comes only from HCG's central Founder policy", async () => {
+    const founder = await fakeHcg({ roles: {} });
+    let login = await founder.h.app.request("/auth/login");
+    let cookie = cookieOf(await founder.h.app.request(founder.consent(login.headers.get("location")!)));
+    expect((await founder.h.api("GET", "/admin/v1/session", undefined, { cookie })).body.principal.roles).toEqual(["founder"]);
+    const manager = await fakeHcg({ roles: { "ads.campaign_manager": true }, founder: false });
+    login = await manager.h.app.request("/auth/login");
+    cookie = cookieOf(await manager.h.app.request(manager.consent(login.headers.get("location")!)));
+    const p = (await manager.h.api("GET", "/admin/v1/session", undefined, { cookie })).body.principal;
+    expect(p.roles).toEqual(["campaign_manager"]);
+    expect(p.permissions).not.toContain("governance.emergency");
   });
 
   it("is unavailable, not improvised, until HCG issues the web client", async () => {

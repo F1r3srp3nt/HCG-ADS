@@ -4,8 +4,17 @@ import { harness, article } from "./helpers.ts";
 const path = (u: string) => u.replace("http://127.0.0.1:7800", "");
 
 describe("delivery engine", () => {
-  it("authorises origins per delivery mode and never serves foreign sites", async () => {
+  it("never serves a real domain while the server-level live switch is off", async () => {
     const h = await harness();
+    const { sidebar } = await h.connectNews();
+    await h.liveInternalCampaign(article(1).id, [sidebar.id]);
+    expect((await h.api("POST", "/admin/v1/publishers/pub_hcg_news/delivery-mode", { mode: "live", confirmation: "ENABLE LIVE HCG News" })).body.deliveryMode).toBe("live");
+    expect((await h.deliver(sidebar.publicKey, {}, "https://news.hakmicapitalgroup.com")).reason).toBe("origin_not_registered_for_test");
+    expect((await h.deliver(sidebar.publicKey)).ad).not.toBeNull(); // test origins keep working
+  });
+
+  it("authorises origins per delivery mode and never serves foreign sites", async () => {
+    const h = await harness({ config: { liveDeliveryEnabled: true } });
     const { sidebar } = await h.connectNews();
     await h.liveInternalCampaign(article(1).id, [sidebar.id]);
     expect((await h.deliver(sidebar.publicKey, {}, "https://evil.example")).reason).toBe("origin_not_registered_for_test");

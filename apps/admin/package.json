@@ -1,6 +1,6 @@
 {
   "name": "@hcg-ads/admin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
-    "@hcg-ads/contracts": "0.1.0",
+    "@hcg-ads/contracts": "0.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

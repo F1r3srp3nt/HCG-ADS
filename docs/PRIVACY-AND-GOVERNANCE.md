@@ -57,3 +57,49 @@ in the web SDK). Settings → `defaultConsent` records the same HCG-wide default
 External advertising must also comply with applicable law (e.g. Norwegian Marketing Control Act, GDPR/ePrivacy,
 EU DSA advertising transparency). HCG ADS provides the controls above; legal review of each external
 advertiser remains a human responsibility.
+
+## Advertising transparency (v0.2.0)
+
+Every delivered ad carries a "Why this ad?" link (the ⓘ beside the disclosure label; `GET /delivery/v1/transparency/{token}`). It states:
+- that it is an advertisement;
+- on whose behalf it is shown and who paid (internal promotions say "own promotion, not paid");
+- the main parameters: placement, any page-section targeting, any frequency limit, priority;
+- that no personal data was used.
+
+The page is static HTML with a restrictive CSP and no scripts, and it can be opened for 7 days after delivery. This follows the spirit of the EU Digital Services Act, Art. 26 (advertising on online platforms).
+
+## Reporting ads
+
+Readers can report an ad from that page. The reasons are:
+- misleading;
+- imitates a system or security warning;
+- scam or malware;
+- offensive;
+- not clearly labelled;
+- other.
+
+Reports are anonymous. They store only the time, campaign, creative, placement, reason and optional text (500 characters); no IP address, cookie or device identifier. Submissions are rate-limited in memory.
+
+Three *serious* reports (system-warning imitation, scam or malware) within 24 hours pause the campaign automatically, pending human review. Creative reviewers resolve reports in **Approvals → Reported ads** (no action / pause / return to draft), with a required outcome note that goes to the audit log.
+
+## Sign-in data (v0.2.0)
+
+HCG ADS signs people in with HCG Connect and keeps a server-side session for at most 12 hours (2 hours idle). It holds:
+- the HCG account ID, display name and email from HCG's `/me`;
+- the organisation;
+- the HCG tokens, sealed with AES-256-GCM.
+
+The browser holds only an opaque, HttpOnly session cookie. Signing out deletes the session. HCG offers no end-session endpoint, so the HCG account itself stays signed in.
+
+## Records of processing (summary for HCG's register)
+
+| Processing | Data | Purpose | Retention | Legal basis (to confirm with counsel) |
+|---|---|---|---|---|
+| Ad delivery and measurement | No personal data. Aggregate events keyed by delivery, campaign, creative and placement | Deliver, cap and count ads; detect invalid traffic | `analyticsRetentionDays` (395) | Legitimate interest; consent for on-device storage |
+| Frequency limits on the device | Campaign ID → timestamps in the reader's own browser storage | Avoid repetition | Per campaign window | Consent (`storage`) |
+| Staff sign-in | HCG account ID, name, email, organisation; sealed tokens | Access control to HCG ADS | 12 h session; audit log entries | Contract / legitimate interest |
+| Advertiser records | Business name, contact email, website | Advertiser management | Until deleted | Contract |
+| Ad reports | Reason and optional free text (no reader identity) | Moderation, consumer protection | Until resolved, then kept with the audit log | Legal obligation / legitimate interest |
+| Uploaded creatives | Advertiser media | Advertising | Until deleted, then `mediaRetentionDays` (30) | Contract |
+
+**DPIA screening.** HCG ADS does no profiling, no tracking across sites or apps, no use of sensitive data and no automated decisions with legal effect. A full DPIA is therefore unlikely to be required for this design. Confirm with counsel before external advertising goes live; revisit if targeting ever changes.

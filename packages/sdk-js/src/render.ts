@@ -20,6 +20,12 @@ export const STYLES = `
 .box-responsive { width: 100%; }
 .chip { position: absolute; z-index: 3; top: 6px; left: 6px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 650; letter-spacing: .02em;
   color: var(--hcg-ads-chip-text, #ffffff); background: var(--hcg-ads-chip, rgba(17,20,24,.78)); line-height: 1.5; pointer-events: none; white-space: nowrap; }
+.hcg-frame { position: relative; display: block; width: 100%; }
+.why { position: absolute; z-index: 4; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font: 700 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-decoration: none;
+  color: var(--hcg-ads-chip-text, #ffffff); background: var(--hcg-ads-chip, rgba(17,20,24,.78)); }
+.why:focus-visible { outline: 2px solid var(--hcg-ads-focus, var(--hcg-ads-accent, #0b7cff)); outline-offset: 1px; }
+.micro .why, .micro + .why { width: 14px; height: 14px; font-size: 9px; top: 2px; right: 2px; }
 .card { display: flex; height: 100%; }
 .stacked .card, .responsive .card { flex-direction: column; }
 .horizontal .card { flex-direction: row; align-items: stretch; }
@@ -127,6 +133,24 @@ function image(doc: Document, url: string, alt: string, crop: import("./types").
   return img;
 }
 
+/** Wraps the ad with its "Why this ad?" link (a sibling: links are never nested). */
+function framed(doc: Document, root: ShadowRoot | HTMLElement, ad: RenderableAd, placement: PlacementInfo | null, adEl: HTMLElement) {
+  const frame = el(doc, "div", "hcg-frame");
+  if (placement?.width && placement.responsive !== "responsive-native") frame.style.maxWidth = `${placement.width}px`;
+  frame.appendChild(adEl);
+  const info = ad.transparencyUrl ? safeUrl(ad.transparencyUrl) : null;
+  if (info) {
+    const why = el(doc, "a", "why", "i");
+    why.href = info;
+    why.target = "_blank";
+    why.rel = "noopener nofollow";
+    why.title = "Why this ad?";
+    why.setAttribute("aria-label", `Why this ad? Information about this ${ad.disclosure.toLowerCase()} and how to report it`);
+    frame.appendChild(why);
+  }
+  root.appendChild(frame);
+}
+
 export function renderAd(root: ShadowRoot | HTMLElement, ad: RenderableAd, placement: PlacementInfo | null, opts: { clickUrl: string; theme?: ThemeOption }): RenderResult {
   const doc = (root as ShadowRoot).ownerDocument ?? (root as HTMLElement).ownerDocument ?? document;
   while (root.firstChild) root.removeChild(root.firstChild);
@@ -167,7 +191,7 @@ export function renderAd(root: ShadowRoot | HTMLElement, ad: RenderableAd, place
     link.rel = "noopener sponsored";
     link.title = ad.displayUrl;
     box.appendChild(link);
-    root.appendChild(box);
+    framed(doc, root, ad, placement, box);
     return { link, media: video, video };
   }
 
@@ -222,6 +246,6 @@ export function renderAd(root: ShadowRoot | HTMLElement, ad: RenderableAd, place
     card.appendChild(body);
     link.appendChild(card);
   }
-  root.appendChild(link);
+  framed(doc, root, ad, placement, link);
   return { link, media: mediaEl, video: null };
 }

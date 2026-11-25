@@ -10,7 +10,7 @@
 
 export const CONTRACT_VERSION = "1" as const;
 export const PRODUCT_ID = "hcg.ads" as const;
-export const PRODUCT_VERSION = "0.1.0" as const;
+export const PRODUCT_VERSION = "0.2.0" as const;
 
 // ---------------------------------------------------------------------------
 // Identity and governance (HCG Connect)
@@ -443,6 +443,8 @@ export interface RenderableAd {
   } | null;
   frequency: { count: number; windowHours: number } | null;
   beacons: { impression: string; viewable: string; video: string };
+  /** "Why this ad?": sponsor, who paid, main parameters, and how to report it (no personal data used). */
+  transparencyUrl?: string;
   preview: boolean;
 }
 

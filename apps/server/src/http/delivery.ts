@@ -35,7 +35,9 @@ export function deliveryRoutes(ctx: AppContext, limiter = new RateLimiter(600, 6
     c.header("referrer-policy", "no-referrer");
     if (c.req.method === "OPTIONS") return c.body(null, 204);
     // The address is used only in memory for abuse limits; it is never stored.
-    const ip = c.env?.incoming?.socket?.remoteAddress ?? "unknown";
+    // The address is used only in memory for abuse limits; it is never stored.
+    const forwarded = ctx.config.trustProxy ? c.req.header("x-forwarded-for")?.split(",")[0]?.trim() : undefined;
+    const ip = forwarded || c.env?.incoming?.socket?.remoteAddress || "unknown";
     if (!limiter.allow(ip)) return c.json({ contractVersion: CONTRACT_VERSION, placement: null, ad: null, reason: "rate_limited" }, 429);
     await next();
   });
@@ -88,6 +90,47 @@ export function deliveryRoutes(ctx: AppContext, limiter = new RateLimiter(600, 6
     if (c.req.query("m") !== "0") ctx.delivery.recordEvent(token, "click", { userAgent: c.req.header("user-agent") });
     c.header("cache-control", "no-store");
     return c.redirect(dest, 302);
+  });
+
+  // ---- Transparency ("Why this ad?") and reporting -------------------------------
+  const reportLimiter = new RateLimiter(10, 60_000);
+  const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
+  const page = (title: string, body: string) => new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>${esc(title)}</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:32px auto;padding:0 16px;color:#111;background:#fff}
+h1{font-size:22px}.chip{display:inline-block;background:#111;color:#fff;border-radius:4px;padding:2px 8px;font-size:13px}li{margin:4px 0}
+fieldset{border:1px solid #ccc;border-radius:8px;margin-top:24px}button{font:inherit;padding:6px 14px}textarea{width:100%}</style></head><body>${body}</body></html>`,
+    { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'" } });
+  const claimsFor = (token: string) => {
+    const claims = ctx.delivery.verifyToken(token);
+    if (!claims || ctx.clock.now().getTime() - claims.t > 7 * 24 * 3600_000) return null;
+    return claims;
+  };
+
+  app.get("/transparency/:token", (c) => {
+    const claims = claimsFor(c.req.param("token"));
+    if (!claims) return c.json({ error: { code: "not_found", message: "This advertisement information is no longer available." } }, 404);
+    const t = ctx.transparency.explain(claims, c.req.param("token"));
+    if (c.req.query("format") === "json" || (c.req.header("accept") ?? "").includes("application/json")) return c.json(t);
+    const reasons = Object.entries(t.reasons).map(([k, v]) => `<label><input type="radio" name="reason" value="${esc(k)}" required> ${esc(v)}</label><br>`).join("");
+    return page("Why am I seeing this ad?", `<p><span class="chip">${esc(t.disclosure)}</span></p><h1>Why am I seeing this ad?</h1>
+<p>This is an advertisement shown on behalf of <b>${esc(t.shownOnBehalfOf)}</b>. Paid by: ${esc(t.paidBy)}.</p>
+<h2>Main parameters</h2><ul>${t.mainParameters.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
+<h2>Your data</h2><p>${esc(t.personalDataUsed)}</p>
+<form method="post" action="/delivery/v1/reports/${esc(c.req.param("token"))}"><fieldset><legend>Report this ad</legend>${reasons}
+<p><label>Details (optional, max 500 characters)<br><textarea name="details" maxlength="500" rows="3"></textarea></label></p>
+<button type="submit">Send report</button><p><small>Reports are anonymous: nothing about you is stored.</small></p></fieldset></form>`);
+  });
+
+  app.post("/reports/:token", async (c) => {
+    const forwarded = ctx.config.trustProxy ? c.req.header("x-forwarded-for")?.split(",")[0]?.trim() : undefined;
+    const ip = forwarded || c.env?.incoming?.socket?.remoteAddress || "unknown";
+    if (!reportLimiter.allow(ip)) return c.json({ error: { code: "rate_limited", message: "Too many reports. Try again later." } }, 429);
+    const claims = claimsFor(c.req.param("token"));
+    if (!claims || claims.pv) return c.json({ error: { code: "not_found", message: "This advertisement can no longer be reported here." } }, 404);
+    const form = (c.req.header("content-type") ?? "").includes("application/json") ? await c.req.json().catch(() => ({})) : await c.req.parseBody();
+    const r = ctx.transparency.report(claims, String((form as Record<string, unknown>).reason ?? ""), (form as Record<string, unknown>).details);
+    if ((c.req.header("content-type") ?? "").includes("application/json")) return c.json({ received: true, id: r.id }, 201);
+    return page("Report received", "<h1>Thank you</h1><p>Your report was received and will be reviewed by HCG. Nothing about you was stored.</p>");
   });
 
   /** Approved public media only. Unapproved uploads are never reachable here. */

@@ -271,8 +271,8 @@ export class CampaignService {
     if (!item.canonicalUrl) throw invalid("This item has no public URL to promote.");
     return {
       type: "article-card" as const,
-      headline: (overrides.headline ?? item.headline).slice(0, 120),
-      description: (overrides.description !== undefined ? overrides.description : item.description)?.slice(0, 300) ?? null,
+      headline: clip(overrides.headline ?? item.headline, 120),
+      description: clip(overrides.description !== undefined ? overrides.description : item.description, 300),
       callToAction: overrides.callToAction ?? (item.sourceId === "src_hcg_news" ? "Read on HCG News" : "Learn more"),
       destinationUrl: item.canonicalUrl,
       variants: [{ device: "any" as const, placementId: null, mediaAssetId: null, imageUrl: item.imageUrl, crop: null }],
@@ -489,3 +489,11 @@ export class CampaignService {
 }
 
 export { conflict };
+
+/** Shortens text at a word boundary with an ellipsis; never cuts a word in half. */
+export function clip<T extends string | null | undefined>(text: T, max: number): T {
+  if (text == null || text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  const space = cut.lastIndexOf(" ");
+  return ((space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:.\-–—]+$/, "") + "…") as T;
+}

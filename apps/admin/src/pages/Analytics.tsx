@@ -75,10 +75,10 @@ export function Analytics() {
             <AreaChart watermark={simulated ? "SIMULATED DEVELOPMENT DATA" : undefined} labels={data.byDay.map((d) => d.day)} series={[
               { key: "imp", label: "Impressions", color: "#22d3ee", values: data.byDay.map((d) => d.impressions) },
               { key: "view", label: "Viewable", color: "#7c3aed", values: data.byDay.map((d) => d.viewable) },
-              { key: "clk", label: "Clicks", color: "#34d399", values: data.byDay.map((d) => d.clicks) },
+              { key: "clk", label: "Clicks", color: "#34d399", axis: "right", values: data.byDay.map((d) => d.clicks) },
             ]} />
           </Panel>
-          <div className="grid-2-1">
+          <div className="stack">
             <Panel title="Breakdown" actions={<Tabs value={group} onChange={setGroup} options={[
               { value: "byCampaign", label: "Campaign" }, { value: "byPlacement", label: "Placement" }, { value: "byPublisher", label: "Publisher" }, { value: "byCreative", label: "Creative" },
             ]} />}>

@@ -113,3 +113,16 @@ describe("acceptance flow (HCG News → internal campaign → delivery → measu
     expect((await h.api("GET", `/admin/v1/campaigns/${c.id}`)).body.state).toBe("completed");
   });
 });
+
+import { clip } from "../src/campaigns/service.ts";
+describe("generated copy", () => {
+  it("shortens long headlines at a word boundary", () => {
+    const long = "How Jensen Huang Lost $1.47 Trillion and Then Got It Almost Back: Inside the Affair, the Allegations and Jensen Huang's Extraordinary Comeback";
+    const out = clip(long, 120)!;
+    expect(out.length).toBeLessThanOrEqual(120);
+    expect(out.endsWith("…")).toBe(true);
+    expect(long.startsWith(out.slice(0, -1))).toBe(true);
+    expect(long[out.length - 1]).toBe(" ");
+    expect(clip("short", 120)).toBe("short");
+  });
+});

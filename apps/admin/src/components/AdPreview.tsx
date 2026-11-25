@@ -1,9 +1,12 @@
-import type { CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import type { CropRect, DeliveryResponse, RenderableAd } from "@hcg-ads/contracts";
+// The HCG ADS SDK's own renderer: previews are rendered by exactly the same code as on publishers.
+import { renderAd } from "@hcg-ads/sdk-render";
 
 /**
- * Renders a delivered ad the way the HCG ADS SDK does, inside a frame of the
- * placement's exact size. Clicks are disabled: previews are never counted.
+ * Renders a delivered ad with the HCG ADS SDK renderer inside a shadow root,
+ * in a frame of the placement's exact size. Clicks are disabled: previews are
+ * never followed and never counted.
  */
 
 export interface FrameSpec {
@@ -14,65 +17,39 @@ export interface FrameSpec {
 
 const PREVIEW_TIP = "Preview — clicks are not counted";
 
-/** CSS that makes the crop rectangle fill its box exactly (no stretching when ratios match). */
+/** CSS that makes the crop rectangle fill its box (same maths as the SDK). Used for thumbnails. */
 export function cropStyle(crop: CropRect): CSSProperties {
   return {
     position: "absolute",
     width: `${100 / crop.width}%`,
-    height: `${100 / crop.height}%`,
+    height: "auto",
     left: `${(-crop.x / crop.width) * 100}%`,
     top: `${(-crop.y / crop.height) * 100}%`,
     maxWidth: "none",
   };
 }
 
-function Media({ ad, fit }: { ad: RenderableAd; fit: "contain" | "cover" }) {
-  const m = ad.media!;
-  const style: CSSProperties = m.crop ? cropStyle(m.crop) : { width: "100%", height: "100%", objectFit: fit, display: "block" };
-  if (m.kind === "video") {
-    return <video src={m.url} poster={m.posterUrl ?? undefined} muted playsInline controls loop style={style} aria-label={m.alt ?? ad.headline} />;
-  }
-  return <img src={m.url} alt={m.alt ?? ad.headline} style={style} draggable={false} />;
-}
-
 export function AdCreative({ ad, frame, device }: { ad: RenderableAd; frame: FrameSpec; device: "desktop" | "mobile" | "any" }) {
+  const host = useRef<HTMLDivElement>(null);
   const fixed = frame.width && frame.height && frame.responsive !== "responsive-native";
-  const W = fixed ? frame.width! : device === "mobile" ? 360 : 640;
-  const H = fixed ? frame.height! : null;
-  const stop = (e: React.MouseEvent) => e.preventDefault();
-
-  // Media creatives (image/video): exact placement size, crop or contain.
-  if ((ad.type === "image" || ad.type === "video") && ad.media) {
-    return (
-      <a href={ad.clickUrl} onClick={stop} title={PREVIEW_TIP} className="hcgad hcgad-media" style={{ width: W, height: H ?? Math.round(W * ((ad.media.height ?? 9) / (ad.media.width ?? 16))) }}>
-        <div className="hcgad-media-box"><Media ad={ad} fit="contain" /></div>
-        <span className="hcgad-label">{ad.disclosure}</span>
-      </a>
-    );
-  }
-
-  // Native / article card.
-  const ratio = H ? W / H : device === "mobile" ? 1 : 3;
-  const horizontal = H ? ratio > 2.5 : device !== "mobile";
-  const tiny = H !== null && H <= 100;
-  const style: CSSProperties = { width: W, height: H ?? undefined };
+  useEffect(() => {
+    const el = host.current;
+    if (!el) return;
+    const root = el.shadowRoot ?? el.attachShadow({ mode: "open" });
+    const { link } = renderAd(root, ad, { id: "preview", width: frame.width, height: frame.height, responsive: frame.responsive, fallback: "collapse" }, { clickUrl: ad.clickUrl });
+    link.title = PREVIEW_TIP;
+    link.removeAttribute("target");
+  }, [ad, frame.width, frame.height, frame.responsive]);
+  // Responsive native placements fill their container: give them a realistic column width.
+  const width = fixed ? frame.width! : frame.responsive === "fluid-width" ? frame.width ?? "100%" : device === "mobile" ? 358 : 640;
   return (
-    <a href={ad.clickUrl} onClick={stop} title={PREVIEW_TIP} className={`hcgad hcgad-card ${horizontal ? "hcgad-h" : "hcgad-v"} ${tiny ? "hcgad-tiny" : ""}`} style={style}>
-      {ad.media && (
-        <div className="hcgad-img" style={horizontal ? { width: tiny ? Math.min(H! * 1.6, W * 0.28) : "38%" } : { height: H ? Math.round(H * 0.48) : Math.round(W * 0.5625) }}>
-          <Media ad={ad} fit="cover" />
-        </div>
-      )}
-      <div className="hcgad-body">
-        <div className="hcgad-meta">
-          <span className="hcgad-label">{ad.disclosure}</span>
-          {!tiny && <span className="hcgad-sponsor">{ad.sponsorName}</span>}
-        </div>
-        <div className="hcgad-headline">{ad.headline}</div>
-        {ad.description && !tiny && <div className="hcgad-desc">{ad.description}</div>}
-        <span className="hcgad-cta">{ad.callToAction}</span>
-      </div>
-    </a>
+    <div
+      ref={host}
+      className="ad-host"
+      title={PREVIEW_TIP}
+      style={{ width, maxWidth: fixed ? undefined : "100%" }}
+      onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    />
   );
 }
 
@@ -80,19 +57,19 @@ export function AdPreview({ response, device = "desktop", caption }: { response:
   const p = response.placement;
   const frame: FrameSpec = p ? { width: p.width, height: p.height, responsive: p.responsive } : { width: null, height: null, responsive: "responsive-native" };
   const fixedW = frame.width && frame.responsive !== "responsive-native" ? frame.width : null;
-  const viewport = device === "mobile" ? 390 : 1100;
-  const scale = fixedW && fixedW > viewport - 32 ? (viewport - 32) / fixedW : 1;
+  const avail = device === "mobile" ? 358 : 900;
+  const scale = fixedW && fixedW > avail ? avail / fixedW : 1;
   return (
     <div className={`preview-stage preview-${device}`}>
       <div className="preview-device" style={{ width: device === "mobile" ? 390 : "100%" }}>
         <div className="preview-page-chrome" aria-hidden>
           <span className="dot" /><span className="dot" /><span className="dot" />
-          <span className="preview-url">news.hakmicapitalgroup.com · preview</span>
+          <span className="preview-url">publisher page · preview</span>
         </div>
         <div className="preview-canvas">
           <div className="preview-fake-text" aria-hidden><i /><i /><i style={{ width: "62%" }} /></div>
           {response.ad ? (
-            <div className="preview-slot" style={{ transform: scale < 1 ? `scale(${scale})` : undefined, transformOrigin: "top left", height: scale < 1 && frame.height ? frame.height * scale : undefined }}>
+            <div className="preview-slot" style={scale < 1 ? { transform: `scale(${scale})`, transformOrigin: "top left", height: frame.height ? frame.height * scale : undefined, width: fixedW! * scale } : undefined}>
               <AdCreative ad={response.ad} frame={frame} device={device} />
             </div>
           ) : (

@@ -5,31 +5,34 @@ export interface Series {
   label: string;
   color: string;
   values: number[];
+  /** "right": scaled on its own (e.g. clicks next to impressions). Default: shared left scale. */
+  axis?: "left" | "right";
 }
 
-/** Animated SVG area chart. Each series has its own scale label; the line draws in on mount. */
+/** Animated SVG area chart. Left-axis series share one scale; right-axis series are scaled on their own. */
 export function AreaChart({ labels, series, height = 220, watermark }: { labels: string[]; series: Series[]; height?: number; watermark?: string }) {
   const id = useId().replace(/:/g, "");
   const [hover, setHover] = useState<number | null>(null);
   const W = 800, H = height, padL = 8, padR = 8, padT = 16, padB = 26;
   const n = Math.max(labels.length, 2);
   const x = (i: number) => padL + (i / (n - 1)) * (W - padL - padR);
+  const leftMax = Math.max(1, ...series.filter((s) => s.axis !== "right").flatMap((s) => s.values));
   const paths = useMemo(() => series.map((s) => {
-    const max = Math.max(1, ...s.values);
+    const max = s.axis === "right" ? Math.max(1, ...s.values) : leftMax;
     const y = (v: number) => padT + (1 - v / max) * (H - padT - padB);
     const pts = s.values.map((v, i) => [x(i), y(v)] as const);
     const line = pts.map(([px, py], i) => `${i ? "L" : "M"}${px.toFixed(1)},${py.toFixed(1)}`).join(" ");
     const area = `${line} L${x(s.values.length - 1).toFixed(1)},${H - padB} L${x(0).toFixed(1)},${H - padB} Z`;
     return { ...s, line, area, max, y };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [series, H, n]);
+  }), [series, H, n, leftMax]);
   const empty = series.every((s) => s.values.every((v) => v === 0));
 
   return (
     <div className="chart">
       <div className="chart-legend">
         {series.map((s) => (
-          <span key={s.key} className="legend-item"><i style={{ background: s.color }} />{s.label}
+          <span key={s.key} className="legend-item"><i style={{ background: s.color }} />{s.label}{s.axis === "right" && series.length > 1 && <small className="muted"> (own scale)</small>}
             {hover !== null && <b>{(s.values[hover] ?? 0).toLocaleString("en-GB")}</b>}
           </span>
         ))}
@@ -53,7 +56,7 @@ export function AreaChart({ labels, series, height = 220, watermark }: { labels:
         {paths.map((p) => (
           <g key={p.key}>
             <path d={p.area} fill={`url(#g-${id}-${p.key})`} className="chart-area" />
-            <path d={p.line} fill="none" stroke={p.color} strokeWidth={2.2} className="chart-line" vectorEffect="non-scaling-stroke" pathLength={1} />
+            <path d={p.line} fill="none" stroke={p.color} strokeWidth={2.2} className="chart-line" pathLength={1} />
           </g>
         ))}
         {hover !== null && (

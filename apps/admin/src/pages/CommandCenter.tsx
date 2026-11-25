@@ -100,7 +100,7 @@ export function CommandCenter() {
         <Panel title="Delivery — last 14 days" subtitle={<><Chip tone="green" label="Measured" /> real impressions and clicks only; simulated data is never mixed in.</>}>
           <AreaChart labels={data.metrics.byDay.map((d) => d.day)} series={[
             { key: "imp", label: "Impressions", color: "#22d3ee", values: data.metrics.byDay.map((d) => d.impressions) },
-            { key: "clk", label: "Clicks", color: "#a78bfa", values: data.metrics.byDay.map((d) => d.clicks) },
+            { key: "clk", label: "Clicks", color: "#a78bfa", axis: "right", values: data.metrics.byDay.map((d) => d.clicks) },
           ]} />
         </Panel>
         <Panel title="Network">

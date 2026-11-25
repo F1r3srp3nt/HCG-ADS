@@ -110,7 +110,7 @@ export function CampaignDetail({ id }: { id: string }) {
   const editable = c.state === "draft" || c.state === "rejected";
   return (
     <div className="page">
-      <PageHeader title={c.name} kicker={<>{c.kind === "internal" ? "Internal campaign" : "External campaign"} · {c.id}</> as unknown as string}>
+      <PageHeader title={c.name} kicker={<>{c.kind === "internal" ? "Internal campaign" : "External campaign"} · {c.id}</>}>
         <a className="btn btn-subtle" href="#/campaigns">← All campaigns</a>
         {editable && <a className="btn btn-ghost" href={`#/creative-studio/${c.id}`}><Icon name="studio" /> Creative Studio</a>}
       </PageHeader>

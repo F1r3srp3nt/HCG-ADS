@@ -85,12 +85,12 @@ export function Panel({ title, subtitle, actions, children, className = "", tone
   );
 }
 
-export function PageHeader({ title, kicker, children }: { title: string; kicker?: string; children?: ReactNode }) {
+export function PageHeader({ title, kicker, children }: { title: string; kicker?: ReactNode; children?: ReactNode }) {
   return (
     <div className="page-head">
-      <div>
+      <div className="page-head-main">
         {kicker && <div className="kicker">{kicker}</div>}
-        <h1 className="page-title">{title}</h1>
+        <h1 className={`page-title ${title.length > 48 ? "page-title-long" : ""}`}>{title}</h1>
       </div>
       {children && <div className="page-actions">{children}</div>}
     </div>

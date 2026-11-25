@@ -3,7 +3,8 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": { "@hcg-ads/sdk-render": ["../../packages/sdk-js/src/render.ts"] }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src"]
 }

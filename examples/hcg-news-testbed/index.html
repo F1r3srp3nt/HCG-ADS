@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>HCG News — HCG ADS test environment</title>
+  <link rel="stylesheet" href="testbed.css">
+</head>
+<body>
+  <div class="testbanner" role="note">
+    <strong>Test environment.</strong> HCG News content with HCG ADS placements, served locally by HCG ADS. This is <em>not</em> the live website, and nothing here is published.
+  </div>
+
+  <header class="masthead">
+    <a class="brand" href="./"><span class="brand-mark">HCG</span> News</a>
+    <nav class="sections" id="sections" aria-label="Sections"></nav>
+  </header>
+
+  <div class="wrap">
+    <div class="slot slot-top" id="slot-top"></div>
+
+    <main class="layout">
+      <section class="content" id="content" aria-live="polite">
+        <p class="status">Loading published articles from HCG News…</p>
+      </section>
+      <aside class="sidebar">
+        <div class="sidebar-label">Advertisement area</div>
+        <div class="slot" id="slot-sidebar"></div>
+        <div class="sidebar-box">
+          <h3>About this page</h3>
+          <p>Articles are read live from the HCG News public API. Placements are requested from HCG ADS through the HCG ADS JavaScript SDK.</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <section class="tools" aria-label="Test tools">
+    <div class="tool">
+      <h3>Consent</h3>
+      <label><input type="checkbox" id="consent-measurement"> Measurement (aggregate impressions and clicks)</label>
+      <label><input type="checkbox" id="consent-storage"> Storage (frequency counters on this device)</label>
+    </div>
+    <div class="tool">
+      <h3>Placements</h3>
+      <ul id="debug" class="debug"></ul>
+      <button type="button" id="refresh">Request new ads</button>
+    </div>
+    <details class="tool" id="configure">
+      <summary>Configure placements</summary>
+      <p class="hint">Public placement keys from HCG ADS → Placements. Leave empty to use the keys HCG ADS reports in development.</p>
+      <form id="config-form"></form>
+    </details>
+  </section>
+
+  <footer class="footer">HCG News test environment · HCG ADS SDK <span id="sdk-version">not loaded</span></footer>
+
+  <script src="config.js"></script>
+  <script src="/delivery/v1/sdk/hcg-ads.js" data-manual></script>
+  <script src="testbed.js"></script>
+</body>
+</html>

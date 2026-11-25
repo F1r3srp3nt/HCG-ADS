@@ -1,0 +1,27 @@
+{
+  "name": "@hcg-ads/sdk",
+  "version": "0.1.0",
+  "description": "HCG ADS JavaScript/TypeScript SDK: placement rendering, privacy-preserving measurement and fallback for HCG publishers.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/types/index.d.ts", "import": "./dist/index.mjs" },
+    "./hcg-ads.js": "./dist/hcg-ads.js"
+  },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node build.mjs && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "happy-dom": "^17.0.0",
+    "typescript": "~5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "hcg-ads",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HCG ADS — central advertising infrastructure for Hakmi Capital Group",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "packages/contracts",
+    "packages/sdk-js",
+    "packages/sdk-react",
+    "apps/server",
+    "apps/admin"
+  ],
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "dev": "npm run dev -w @hcg-ads/server",
+    "dev:admin": "npm run dev -w @hcg-ads/admin",
+    "build": "npm run build -w @hcg-ads/sdk && npm run build -w @hcg-ads/admin",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "acceptance": "node scripts/acceptance.mjs"
+  }
+}

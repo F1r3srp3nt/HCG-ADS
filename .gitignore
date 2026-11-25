@@ -1,0 +1,14 @@
+node_modules/
+dist/
+data/
+*.db
+*.db-*
+.env
+.env.*
+!.env.example
+test-results/
+playwright-report/
+.DS_Store
+config/hcg-connect.json
+config/local.json
+config/storage.json

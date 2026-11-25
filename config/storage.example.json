@@ -1,0 +1,9 @@
+{
+  "provider": "hcg-server",
+  "hcgServer": {
+    "adminUrl": "http://127.0.0.1:7600",
+    "tokenFile": "<path to the HCG Server local admin token file>",
+    "rootId": "<id of an HCG Server storage root you approved for HCG ADS>",
+    "basePath": "hcg-ads"
+  }
+}

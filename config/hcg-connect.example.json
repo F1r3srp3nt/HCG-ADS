@@ -1,0 +1,20 @@
+{
+  "contractVersion": "hcg.ads.connect/1",
+  "issuer": "https://qggdyzoydveafkmjgkpq.supabase.co/auth/v1",
+  "jwksEndpoint": "https://qggdyzoydveafkmjgkpq.supabase.co/auth/v1/.well-known/jwks.json",
+  "apiBaseUrl": "https://beta.hakmicapitalgroup.com",
+  "ecosystemApiPath": "/api/public/ecosystem/v1",
+  "productId": "<ERP App Access product key issued by HCG for HCG ADS>",
+  "roleFeatures": {
+    "founder": "<feature key>",
+    "ads_administrator": "<feature key>",
+    "campaign_manager": "<feature key>",
+    "publisher_administrator": "<feature key>",
+    "advertiser": "<feature key>",
+    "creative_reviewer": "<feature key>",
+    "finance_administrator": "<feature key>",
+    "analytics_viewer": "<feature key>"
+  },
+  "trustedClientIds": [],
+  "organisationId": null
+}

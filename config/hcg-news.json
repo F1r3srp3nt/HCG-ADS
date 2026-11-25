@@ -1,0 +1,8 @@
+{
+  "_comment": "Public values only (the same public anon key the HCG News website and iOS app ship). Read-only access under row-level security. Never put a service-role key here.",
+  "environment": "production",
+  "projectURL": "https://qggdyzoydveafkmjgkpq.supabase.co",
+  "publicClientKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnZ2R5em95ZHZlYWZrbWpna3BxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1ODQwODQsImV4cCI6MjA5ODE2MDA4NH0.OLbNhV_hvWwS_BqgYVxwU9TZ9P05lX2Fp-ake-hAJ4M",
+  "publicationURL": "https://news.hakmicapitalgroup.com",
+  "approvedByFounder": true
+}

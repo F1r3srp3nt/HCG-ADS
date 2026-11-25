@@ -30,7 +30,7 @@ export class LocalStorageProvider implements StorageProvider {
     return { ok: true, message: `Local development storage at ${this.root}` };
   }
 
-  async put(key: string, data: Buffer): Promise<void> {
+  async put(key: string, data: Buffer, _contentType?: string): Promise<void> {
     const p = this.path(key);
     await mkdir(dirname(p), { recursive: true });
     const tmp = `${p}.${randomBytes(6).toString("hex")}.part`;

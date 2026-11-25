@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { createRemoteJWKSet, jwtVerify, type JWTPayload, type JWTVerifyGetKey } from "jose";
 import { ROLES, ROLE_PERMISSIONS, type Permission, type Principal, type Role } from "@hcg-ads/contracts";
 import type { HcgConnectConfig } from "../config.ts";
 import { AppError } from "../core/errors.ts";
@@ -60,7 +60,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 export class HcgConnectIdentityProvider implements IdentityProvider {
   readonly mode = "hcg-connect" as const;
-  private jwks: ReturnType<typeof createRemoteJWKSet> | null;
+  private jwks: JWTVerifyGetKey | null;
   private cache = new Map<string, CacheEntry>();
 
   constructor(
@@ -68,7 +68,7 @@ export class HcgConnectIdentityProvider implements IdentityProvider {
     private problems: string[],
     private fetchImpl: typeof fetch = fetch,
     private now: () => number = Date.now,
-    jwks?: ReturnType<typeof createRemoteJWKSet>,
+    jwks?: JWTVerifyGetKey,
   ) {
     this.jwks = jwks ?? (config ? createRemoteJWKSet(new URL(config.jwksEndpoint), { cacheMaxAge: 10 * 60 * 1000 }) : null);
   }

@@ -66,14 +66,15 @@ export class HcgServerStorageProvider implements StorageProvider {
     }
   }
 
-  async put(key: string, data: Buffer): Promise<void> {
+  async put(key: string, data: Buffer, _contentType?: string): Promise<void> {
     const path = this.filePath(key);
     await this.mkdirs(path);
     const sha256 = createHash("sha256").update(data).digest("hex");
     const created = await this.call("POST", this.url("uploads"), JSON.stringify({ root: this.cfg.rootId, path, size: data.length, sha256, overwrite: true }), { "content-type": "application/json" });
     if (!created.ok) throw new Error(`HCG Server refused the upload: ${await errorText(created)}`);
     const { id } = (await created.json()) as { id: string };
-    for (let offset = 0; offset < data.length || (offset === 0 && data.length === 0); offset += HcgServerStorageProvider.CHUNK) {
+    // A zero-byte file commits without any chunk (HCG Server requires Content-Length on every PUT).
+    for (let offset = 0; offset < data.length; offset += HcgServerStorageProvider.CHUNK) {
       const chunk = data.subarray(offset, offset + HcgServerStorageProvider.CHUNK);
       const res = await this.call("PUT", this.url(`uploads/${id}`, { offset: String(offset) }), chunk, {
         "content-type": "application/octet-stream",
@@ -83,7 +84,6 @@ export class HcgServerStorageProvider implements StorageProvider {
         await this.call("DELETE", this.url(`uploads/${id}`)).catch(() => undefined);
         throw new Error(`HCG Server chunk upload failed: ${await errorText(res)}`);
       }
-      if (data.length === 0) break;
     }
     const commit = await this.call("POST", this.url(`uploads/${id}/commit`));
     if (!commit.ok) throw new Error(`HCG Server commit failed: ${await errorText(commit)}`);

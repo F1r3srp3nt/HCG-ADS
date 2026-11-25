@@ -2,7 +2,7 @@
 # docker build -t hcg-ads:0.2.0 .
 FROM node:22.21-bookworm-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages ./packages
 COPY apps ./apps
 RUN npm ci --no-audit --no-fund && npm run build

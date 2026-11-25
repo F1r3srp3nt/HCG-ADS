@@ -125,10 +125,10 @@
 
   // ---- views -------------------------------------------------------------------
 
-  function card(a) {
+  function card(a, eager) {
     var img = safeImage(a.featured_image_url);
     return h("article", { class: "story" }, [
-      img ? h("a", { class: "story-img", href: "?article=" + encodeURIComponent(a.id) }, [h("img", { src: img, alt: a.featured_image_alt || "", loading: "lazy", referrerpolicy: "no-referrer" })]) : null,
+      img ? h("a", { class: "story-img", href: "?article=" + encodeURIComponent(a.id) }, [h("img", { src: img, alt: a.featured_image_alt || "", loading: eager ? "eager" : "lazy", referrerpolicy: "no-referrer" })]) : null,
       h("div", { class: "story-body" }, [
         a.category ? h("span", { class: "kicker", text: a.category.name }) : null,
         h("h2", {}, [h("a", { href: "?article=" + encodeURIComponent(a.id), text: a.title })]),
@@ -146,7 +146,7 @@
     var lead = articles[0];
     var list = h("div", { class: "stories" });
     articles.forEach(function (a, i) {
-      var c = card(a);
+      var c = card(a, i < 3);
       if (i === 0) c.classList.add("lead");
       list.appendChild(c);
     });

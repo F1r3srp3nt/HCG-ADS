@@ -23,7 +23,14 @@ export const STYLES = `
 .stacked .card, .responsive .card { flex-direction: column; }
 .horizontal .card { flex-direction: row; align-items: stretch; }
 .img { position: relative; overflow: hidden; background: var(--hcg-ads-media-bg, #e9ecf1); flex: none; }
-.stacked .img { width: 100%; height: 48%; }
+.stacked .img { width: 100%; height: 42%; }
+.stacked .body { justify-content: flex-start; min-height: 0; }
+.stacked .text { min-height: 0; overflow: hidden; }
+.stacked .headline { -webkit-line-clamp: 2; }
+.stacked .desc { -webkit-line-clamp: 1; }
+.stacked .cta { margin-top: auto; }
+.stacked:not(.has-img) .headline { -webkit-line-clamp: 4; }
+.stacked:not(.has-img) .desc { -webkit-line-clamp: 3; }
 .responsive .img { width: 100%; aspect-ratio: var(--img-ratio, 16 / 9); }
 .horizontal .img { height: 100%; aspect-ratio: var(--img-ratio, 1 / 1); max-width: 40%; }
 .img img { position: absolute; display: block; }

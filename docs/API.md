@@ -38,7 +38,7 @@ Reasons for an empty response: `unknown_placement`, `emergency_shutdown`, `publi
 | Media | `GET media`, `GET media/{id}`, `POST media` (multipart `file`, `advertiserId?`, `previousVersionId?`), `DELETE media/{id}`, `GET media/{id}/content?t=` (signed preview) |
 | Campaigns | `GET/POST campaigns`, `POST campaigns/from-content {sourceId, externalIds[], placementIds[], mode?, overrides?, startAt?, endAt?}`, `GET/PATCH campaigns/{id}`, `POST campaigns/{id}/creatives`, `PATCH/DELETE creatives/{id}`, `POST campaigns/{id}/submit|approve|reject|activate|pause|revise|archive|duplicate`, `GET campaigns/{id}/preview?placementId=&device=&creativeId=` |
 | Approvals | `GET approvals` |
-| Analytics | `GET analytics?dataset=measured|simulated&from=&to=&campaignId=&publisherId=`, `POST analytics/simulate` (development only), `DELETE analytics/simulated` |
+| Analytics | Requests are counted per placement before a campaign is chosen, so a `campaignId` filter shows fills, not requests. `GET analytics?dataset=measured|simulated&from=&to=&campaignId=&publisherId=`, `POST analytics/simulate` (development only), `DELETE analytics/simulated` |
 | Revenue (test mode) | `GET revenue`, `POST revenue/ledger` |
 
 ## Campaign lifecycle

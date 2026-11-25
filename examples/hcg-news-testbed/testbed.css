@@ -94,3 +94,4 @@ time { font-size: 12.5px; color: var(--muted); }
   .headline { font-size: 30px; }
   .brand { font-size: 28px; }
 }
+.sidebar:not(:has(.ad-host[data-hcg-ads-state="rendered"])) .sidebar-label { display: none; }

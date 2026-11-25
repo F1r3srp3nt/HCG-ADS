@@ -19,8 +19,8 @@ The SDKs take `{ storage, measurement }`:
 - `storage: true` → frequency counters (campaign id → timestamps) are kept in local storage and pruned to each
   campaign's window. Only the ids of campaigns that reached their limit are sent (`exclude`).
 
-The default when a publisher sends nothing is configurable in Settings (`defaultConsent`; default: measurement on,
-storage off).
+When the host page gives no consent, the SDKs assume measurement on and device storage off (`DEFAULT_CONSENT`
+in the web SDK). Settings → `defaultConsent` records the same HCG-wide default.
 
 ## Retention
 
